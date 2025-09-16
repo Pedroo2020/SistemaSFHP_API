@@ -28,7 +28,7 @@ def login():
 
         # Obtém a senha criptografada e o id_usuario
         cursor.execute('''
-            SELECT SENHA, ID_USUARIO
+            SELECT SENHA, ID_USUARIO, TENTATIVA_ERRO, ATIVO, TIPO_USUARIO
             FROM USUARIO
             WHERE CPF = ?
         ''', (cpf,))
@@ -43,15 +43,52 @@ def login():
 
         senha_hash = user_exist[0]
         id_usuario = user_exist[1]
+        tentativa_erro = user_exist[2]
+        ativo = True if user_exist[3] == 1 else False
+        tipo_usuario = int(user_exist[4])
+
+        # Retorna caso usuário inativo
+        if not ativo:
+            return jsonify({
+                'error': 'Usuário inativo.'
+            }), 403
 
         # Verifica se a senha inserida é igual a criptografada
         senha_check = check_password_hash(senha_hash, senha)
 
         # Caso sejam diferentes, retorna
         if not senha_check:
+            # Caso não seja ADM
+            if tipo_usuario != 1:
+                tentativa_erro = tentativa_erro + 1
+                new_ativo = 1
+
+                # Caso tenha 3 tentativas
+                if tentativa_erro >= 3:
+                    tentativa_erro = 0
+                    new_ativo = 0
+
+                # Atualiza as tentativas e o ativo
+                cursor.execute('''
+                    UPDATE USUARIO
+                    SET TENTATIVA_ERRO = ?, ATIVO = ?
+                    WHERE ID_USUARIO = ?
+                ''', (tentativa_erro, new_ativo, id_usuario))
+
+                con.commit()
+
             return jsonify({
                 'error': 'Senha incorreta.'
             }), 401
+
+        # Reseta as tentativas caso a senha esteja certa
+        cursor.execute('''
+            UPDATE USUARIO
+            SET TENTATIVA_ERRO = ?
+            WHERE ID_USUARIO = ?
+        ''', (0, id_usuario))
+
+        con.commit()
 
         # Gera o token
         token = generate_token(id_usuario, cpf)

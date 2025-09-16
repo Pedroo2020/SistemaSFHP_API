@@ -71,13 +71,7 @@ def cadastro_post():
             WHERE ID_USUARIO = ?
         ''', (id_usuario,))
 
-        tipo_usuario = cursor.fetchone()[0]
-
-        # Usuário não for ADM, retorna
-        if str(tipo_usuario) != '1':
-            return jsonify({
-                'error': 'Usuário não autorizado.'
-            }), 401
+        tipo_usuario_token = cursor.fetchone()[0]
 
         # Obtém os dados
         data = request.get_json()
@@ -90,6 +84,19 @@ def cadastro_post():
         sexo = data.get('sexo')
         nascimento = data.get('nascimento')
         tipo_usuario = data.get('tipo_usuario')
+
+        # Usuário não for ADM, retorna
+        if tipo_usuario_token != 1:
+
+            if tipo_usuario_token != 4:
+                return jsonify({
+                    'error': 'Usuário não autorizado.'
+                }), 401
+
+            elif tipo_usuario != 5:
+                return jsonify({
+                    'error': 'Cadastro de tipo de usuário não autorizado.'
+                }), 401
 
         # Retorna caso dados incompletos
         if not nome or not email or not cpf or not coren_crm_sus or not telefone or not sexo or not nascimento or not tipo_usuario:
@@ -119,8 +126,8 @@ def cadastro_post():
         # Cadastro o usuário no banco
         cursor.execute('''
             INSERT INTO USUARIO
-            (NOME, EMAIL, CPF, COREN_CRM_SUS, TELEFONE, SEXO, DATA_NASCIMENTO, TIPO_USUARIO, SENHA)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (NOME, EMAIL, CPF, COREN_CRM_SUS, TELEFONE, SEXO, DATA_NASCIMENTO, TIPO_USUARIO, SENHA, TENTATIVA_ERRO, ATIVO)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1)
         ''', (nome, email, cpf, coren_crm_sus, telefone, sexo, nascimento, tipo_usuario, senha_hash))
 
         # Salva as mudanças

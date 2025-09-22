@@ -147,3 +147,67 @@ def cadastro_post():
         # Fecha o cursor ao final
         cursor.close()
 
+@app.route('/cadastro', methods=['GET'])
+def get_cadastro():
+    # Obtém o token
+    token = request.headers.get('Authorization')
+
+    # Retorna caso não tenha token
+    if not token:
+        return jsonify({'error': 'Token de autenticação necessário'}), 401
+
+    try:
+        cursor = con.cursor()
+
+        # Remove o bearer
+        token = remover_bearer(token)
+
+        # Valida o token
+        token_valido, payload = validar_token(token)
+
+        # Retorna caso token inválido
+        if not token_valido:
+            return jsonify({
+                'error': payload
+            }), 401
+
+        # Obtém o id_usuario
+        id_usuario = payload['id_usuario']
+
+        cursor.execute('''
+            SELECT NOME, EMAIL, CPF, TELEFONE, DATA_NASCIMENTO, SEXO, TIPO_USUARIO, COREN_CRM_SUS
+            FROM USUARIO
+            WHERE ID_USUARIO = ?
+        ''', (id_usuario,))
+
+        data = cursor.fetchone()
+
+        nome = data[0]
+        email = data[1]
+        cpf = data[2]
+        telefone = data[3]
+        data_nascimento = data[4]
+        sexo = data[5]
+        tipo_usuario = data[6]
+        coren_crm_sus = data[7]
+
+        return jsonify({
+            "user": {
+                "nome": nome,
+                "email": email,
+                "cpf": cpf,
+                "telefone": telefone,
+                "data_nascimento": data_nascimento,
+                "sexo": sexo,
+                "tipo_usuario": tipo_usuario,
+                "coren_crm_sus": coren_crm_sus
+            }
+        }), 200
+    except Exception as e:
+        # Retorna caso ocorra erro inesperado
+        return jsonify({
+            'error': str(e)
+        })
+    finally:
+        # Fecha o cursor ao final
+        cursor.close()

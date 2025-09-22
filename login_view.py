@@ -51,6 +51,12 @@ def login():
             'error': 'Dados incompletos.'
         }), 401
 
+    # Retorna caso o CPF não exista
+    if len(cpf) < 11:
+        return jsonify({
+            'error': 'CPF inválido.'
+        }), 401
+
     try:
         # Abre o cursor
         cursor = con.cursor()

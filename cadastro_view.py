@@ -20,6 +20,34 @@ def validar_senha(senha):
 
     return True
 
+def validar_cpf(cpf: str) -> bool:
+    if not isinstance(cpf, str):
+        return False
+
+    # Remove tudo que não for dígito
+    num = re.sub(r'\D', '', cpf)
+
+    # Deve ter 11 dígitos
+    if len(num) != 11:
+        return False
+
+    # Não pode ser sequência de mesmo dígito (ex: '00000000000', '11111111111', ...)
+    if num == num[0] * 11:
+        return False
+
+    # Calcula o primeiro dígito verificador
+    def calc_dig(slice_digits, multipliers):
+        s = sum(int(d) * m for d, m in zip(slice_digits, multipliers))
+        r = s % 11
+        return '0' if r < 2 else str(11 - r)
+
+    # primeiros 9 dígitos
+    d1 = calc_dig(num[:9], range(10, 1, -1))
+    # primeiros 9 + d1 -> primeiros 10 para calcular d2
+    d2 = calc_dig(num[:9] + d1, range(11, 1, -1))
+
+    return num[-2:] == (d1 + d2)
+
 # Remover bearer
 def remover_bearer(token):
     if token.startswith('Bearer '):
@@ -152,8 +180,11 @@ def get_cadastro():
     # Obtém o token
     token = request.headers.get('Authorization')
 
+    # Obtém o CPF do usuário
+    cpf_param = request.args.get('cpf')
+
     # Retorna caso não tenha token
-    if not token:
+    if not token and not cpf_param:
         return jsonify({'error': 'Token de autenticação necessário'}), 401
 
     try:
@@ -174,13 +205,54 @@ def get_cadastro():
         # Obtém o id_usuario
         id_usuario = payload['id_usuario']
 
-        cursor.execute('''
-            SELECT NOME, EMAIL, CPF, TELEFONE, DATA_NASCIMENTO, SEXO, TIPO_USUARIO, COREN_CRM_SUS
-            FROM USUARIO
-            WHERE ID_USUARIO = ?
-        ''', (id_usuario,))
+        # Caso tenha passado o parâmetro cpf
+        if cpf_param:
+
+            cpf_valido = validar_cpf(cpf_param)
+
+            if not cpf_valido:
+                return jsonify({
+                    'error': 'CPF inválido.'
+                }), 401
+
+            # Verifica o tipo do usuário
+            cursor.execute('''
+                SELECT TIPO_USUARIO
+                FROM USUARIO
+                WHERE ID_USUARIO = ?
+            ''', (id_usuario,))
+
+            tipo_user_token = cursor.fetchone()[0]
+
+            # Caso não seja funcionário, retorna
+            if tipo_user_token not in [1, 2, 3, 4]:
+                return jsonify({
+                    'error': 'Busca não autorizada.'
+                }), 405
+
+            # Obtém os dados do CPF
+            cursor.execute('''
+                SELECT NOME, EMAIL, CPF, TELEFONE, DATA_NASCIMENTO, SEXO, TIPO_USUARIO, COREN_CRM_SUS
+                FROM USUARIO
+                WHERE cpf = ?
+            ''', (cpf_param,))
+
+        else:
+
+            # Obtém pelo id do usuário
+            cursor.execute('''
+                SELECT NOME, EMAIL, CPF, TELEFONE, DATA_NASCIMENTO, SEXO, TIPO_USUARIO, COREN_CRM_SUS
+                FROM USUARIO
+                WHERE ID_USUARIO = ?
+            ''', (id_usuario,))
 
         data = cursor.fetchone()
+
+        if not data:
+            return jsonify({
+                'error': 'Usuário não encontrado.',
+                'userNotFound': True
+            }), 404
 
         nome = data[0]
         email = data[1]

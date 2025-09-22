@@ -4,34 +4,6 @@ from flask_bcrypt import check_password_hash
 from main import app, con, senha_secreta
 import re
 
-def validar_cpf(cpf: str) -> bool:
-    if not isinstance(cpf, str):
-        return False
-
-    # Remove tudo que não for dígito
-    num = re.sub(r'\D', '', cpf)
-
-    # Deve ter 11 dígitos
-    if len(num) != 11:
-        return False
-
-    # Não pode ser sequência de mesmo dígito (ex: '00000000000', '11111111111', ...)
-    if num == num[0] * 11:
-        return False
-
-    # Calcula o primeiro dígito verificador
-    def calc_dig(slice_digits, multipliers):
-        s = sum(int(d) * m for d, m in zip(slice_digits, multipliers))
-        r = s % 11
-        return '0' if r < 2 else str(11 - r)
-
-    # primeiros 9 dígitos
-    d1 = calc_dig(num[:9], range(10, 1, -1))
-    # primeiros 9 + d1 -> primeiros 10 para calcular d2
-    d2 = calc_dig(num[:9] + d1, range(11, 1, -1))
-
-    return num[-2:] == (d1 + d2)
-
 def generate_token(user_id, cpf):
     payload = {'id_usuario': user_id, 'cpf': cpf}
     token = jwt.encode(payload, senha_secreta, algorithm='HS256')

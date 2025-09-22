@@ -96,7 +96,8 @@ def login():
         # Retorna sucesso e o token
         return jsonify({
             'success': 'Login realizado com sucesso!',
-            'token': token
+            'token': token,
+            'tipo_usuario': tipo_usuario
         }), 200
     except Exception as e:
         # Retorna caso ocorra erro inesperado

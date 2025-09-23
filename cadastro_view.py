@@ -47,6 +47,7 @@ def validar_cpf(cpf: str) -> bool:
     d2 = calc_dig(num[:9] + d1, range(11, 1, -1))
 
     return num[-2:] == (d1 + d2)
+
 def validar_sus(numero: str) -> bool:
     if not isinstance(numero, str):
         return False

@@ -47,6 +47,66 @@ def validar_cpf(cpf: str) -> bool:
     d2 = calc_dig(num[:9] + d1, range(11, 1, -1))
 
     return num[-2:] == (d1 + d2)
+def validar_sus(numero: str) -> bool:
+    if not isinstance(numero, str):
+        return False
+
+    num = re.sub(r'\D', '', numero)
+
+    if len(num) != 15:
+        return False
+
+    # Se todos os dígitos forem iguais → inválido
+    if num == num[0] * 15:
+        return False
+
+    inicio = num[0]
+
+    # CNS definitivos (1 ou 2)
+    if inicio in ('1', '2'):
+        base = num[:13]
+        dv_informado = num[13:]
+
+        soma1 = sum(int(d) * (15 - i) for i, d in enumerate(base))
+        resto1 = soma1 % 11
+        dv1 = 0 if resto1 in (0, 1) else 11 - resto1
+
+        soma2 = sum(int(d) * (16 - i) for i, d in enumerate(base + str(dv1)))
+        resto2 = soma2 % 11
+        dv2 = 0 if resto2 in (0, 1) else 11 - resto2
+
+        dv_calculado = f"{dv1}{dv2}"
+        return dv_informado == dv_calculado
+
+    # CNS profissionais (7): apenas verificar se são 15 dígitos
+    elif inicio == '7':
+        return True  # regra específica do MS, não tem cálculo simples
+
+    # CNS provisórios (8 ou 9): só verificar tamanho
+    elif inicio in ('8', '9'):
+        return True
+
+    return False
+
+def validar_coren_crm(numero: str) -> bool:
+    if not isinstance(numero, str):
+        return False
+
+    # Ex: 123456-SP ou 123456
+    padrao = r'^\d{6,8}(-[A-Z]{2})?$'
+    return re.match(padrao, numero) is not None
+
+def validar_telefone(telefone: str) -> bool:
+    if not isinstance(telefone, str):
+        return False
+
+    # Remove caracteres não numéricos
+    num = re.sub(r'\D', '', telefone)
+
+    # Aceita formatos:
+    # 10 dígitos (fixo: DDD + 8)
+    # 11 dígitos (celular: DDD + 9 + 8)
+    return len(num) in (10, 11)
 
 # Remover bearer
 def remover_bearer(token):
@@ -112,6 +172,13 @@ def cadastro_post():
         sexo = data.get('sexo')
         nascimento = data.get('nascimento')
         tipo_usuario = data.get('tipo_usuario')
+        senha = data.get('senha')
+
+        # Retorna caso dados incompletos
+        if not nome or not email or not cpf or not telefone or not sexo or not nascimento or not tipo_usuario:
+            return jsonify({
+                'error': 'Dados incompletos.'
+            }), 400
 
         # Usuário não for ADM, retorna
         if tipo_usuario_token != 1:
@@ -126,11 +193,78 @@ def cadastro_post():
                     'error': 'Cadastro de tipo de usuário não autorizado.'
                 }), 401
 
-        # Retorna caso dados incompletos
-        if not nome or not email or not cpf or not coren_crm_sus or not telefone or not sexo or not nascimento or not tipo_usuario:
-            return jsonify({
-                'error': 'Dados incompletos.'
-            }), 400
+            # Valida o CPF e telefone
+            cpf_valido = validar_cpf(cpf)
+            telefone_valido = validar_telefone(telefone)
+
+            # CPF inválido
+            if not cpf_valido:
+                return jsonify({
+                    'error': 'CPF inválido.'
+                }), 400
+
+            # Telefone inválido
+            if not telefone_valido:
+                return jsonify({
+                    'error': 'Telefone inválido.'
+                }), 400
+
+        # Declara a variável vazia para poder alterá-la depois
+        senha_hash = ""
+
+        # SUS e coren inválidos
+        if tipo_usuario == 5:
+
+            # Verifica se o usuário informou o documento
+            if not coren_crm_sus:
+                return jsonify({
+                    'error': 'Informe o número do SUS.'
+                }), 400
+
+            sus_valido = validar_sus(coren_crm_sus)
+
+            if not sus_valido:
+                return jsonify({
+                    'error': 'Número do SUS inválido.'
+                }), 400
+
+            # Caso o usuário seja paciente, gera senha a partir do número do sus
+            senha_hash = generate_password_hash(coren_crm_sus)
+
+        else:
+            # Caso seja médico ou enfermeiro, verifica CRM / COREN
+            if tipo_usuario in [2, 3]:
+
+                # Verifica se o usuário informou o documento
+                if not coren_crm_sus:
+                    return jsonify({
+                        'error': f'Informe o {'CRM' if tipo_usuario == 2 else 'COREN'}.'
+                    }), 400
+
+                crm_coren_valido = validar_coren_crm(coren_crm_sus)
+
+                if not crm_coren_valido:
+                    return jsonify({
+                        'error': f'{'CRM' if tipo_usuario == 2 else 'COREN'} inválido.'
+                    }), 400
+
+            # Caso a senha não for informada
+            if not senha:
+                return jsonify({
+                    'error': 'Informe a senha.'
+                }), 400
+
+            # Verifica se a senha é forte
+            senha_valida = validar_senha(senha)
+
+            # Retorna o erro da senha
+            if senha_valida is not True:
+                return jsonify({
+                    'error': senha_valida
+                }), 400
+
+            # Gera a senha criptografada
+            senha_hash = generate_password_hash(senha)
 
         # Verifica se os dados já estão cadastrados
         cursor.execute('''
@@ -147,9 +281,6 @@ def cadastro_post():
             return jsonify({
                 'error': 'Dados já cadastrados.'
             }), 401
-
-        # Gera a senha criptografada usando o documento como padrão
-        senha_hash = generate_password_hash(coren_crm_sus)
 
         # Cadastro o usuário no banco
         cursor.execute('''

@@ -1,7 +1,6 @@
 from flask import request, jsonify
 from main import app, con
 from components.utils import validar_token, remover_bearer
-from flask_socketio import emit
 
 @app.route('/consulta', methods=['POST'])
 def add_consulta():

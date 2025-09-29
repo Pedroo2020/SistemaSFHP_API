@@ -2,9 +2,10 @@ from flask import request, jsonify
 import jwt
 from flask_bcrypt import check_password_hash
 from main import app, con, senha_secreta, socketio
-from components.socketio import usuarios_conectados
+import json
 from flask_socketio import emit
-from components.utils import validar_token
+from components.utils import validar_token, remover_bearer
+
 
 def generate_token(user_id, cpf):
     payload = {'id_usuario': user_id, 'cpf': cpf}
@@ -119,20 +120,69 @@ def login():
 
 # Autenticar Socket.io
 @socketio.on('autenticar')
-def autenticar(token):
+def autenticar(data):
 
+    # Obtém o token
+    token = data['token']
+
+    # Retorna caso seja nulo
     if not token:
         emit("autenticado", {"error": "Sessão não informada."})
         return False
 
+    # Valida o token
     token_valido, payload = validar_token(token)
 
+    # Obtém o id do usuário
+    id_usuario = payload['id_usuario']
+
+    # Retorna caso token inválido
     if not token_valido:
         emit("autenticado", {"error": "Sessão inválida."})
         return False
 
+    # Lê o arquivo JSON
+    with open("components/sid.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Adiciona o novo sid na lista
+    data[id_usuario] = request.sid
+
+    # Salva de volta no arquivo
+    with open("components/sid.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+
+# Logout Socket.io
+@socketio.on('logout')
+def autenticar(data):
+
+    # Obtém o token
+    token = data['token']
+
+    # Retorna caso seja nulo
+    if not token:
+        emit("autenticado", {"error": "Sessão não informada."})
+        return False
+
+    # Valida o token
+    token_valido, payload = validar_token(token)
+
+    # Obtém o id do usuário
     id_usuario = payload['id_usuario']
 
-    usuarios_conectados[id_usuario] = request.sid
-    print(f"Usuário {id_usuario} autenticado no socket {request.sid}")
-    emit("autenticado", {"msg": f"Usuário autenticado com sucesso!", "error": False})
+    # Retorna caso token inválido
+    if not token_valido:
+        emit("autenticado", {"error": "Sessão inválida."})
+        return False
+
+    # Lê o arquivo JSON
+    with open("components/sid.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Se a chave existe, remove
+    if str(id_usuario) in data:
+        del data[str(id_usuario)]
+
+    # Salva de volta no arquivo
+    with open("components/sid.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)

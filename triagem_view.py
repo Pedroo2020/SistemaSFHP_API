@@ -1,9 +1,8 @@
 from flask import request, jsonify
 from main import app, con
 from components.utils import validar_token, remover_bearer
-from flask_socketio import emit
 
-@app.route('/consulta', methods=['POST'])
+@app.route('/triagem', methods=['POST'])
 def add_consulta():
     # Obtém o token
     token = request.headers.get('Authorization')
@@ -85,29 +84,12 @@ def add_consulta():
 
         id_paciente = user_exist[0]
 
-        # Verifica se o paciente já possui consulta ativa
-        cursor.execute('''
-            SELECT 1
-            FROM CONSULTA
-            WHERE ID_USUARIO = ? AND SITUACAO != ?
-        ''', (id_paciente, 5))
-
-        consulta_exist = cursor.fetchone()
-
-        # Retorna caso já possua consulta cadastrada
-        if consulta_exist:
-            return jsonify({
-                'error': 'Paciente já possui consulta em andamento.'
-            }), 401
-
-        # Insere a consulta na tabela
         cursor.execute('''
             INSERT INTO CONSULTA
             (ID_USUARIO, SITUACAO, ID_RECEPCIONISTA)
             VALUES (?, ?, ?)
         ''', (id_paciente, situacao, id_usuario))
 
-        # Salva os dados
         con.commit()
 
         return jsonify({

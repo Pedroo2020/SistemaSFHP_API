@@ -294,3 +294,95 @@ def get_cadastro():
     finally:
         # Fecha o cursor ao final
         cursor.close()
+
+
+@app.route('/users', methods=['GET'])
+def get_all_users():
+    # Obtém o token
+    token = request.headers.get('Authorization')
+
+    # Retorna caso não tenha token
+    if not token:
+        return jsonify({'error': 'Token de autenticação necessário'}), 401
+
+    try:
+        cursor = con.cursor()
+
+        # Remove o bearer
+        token = remover_bearer(token)
+
+        # Valida o token
+        token_valido, payload = validar_token(token)
+
+        # Retorna caso token inválido
+        if not token_valido:
+            return jsonify({
+                'error': payload
+            }), 401
+
+        # Obtém o id_usuario
+        id_usuario = payload['id_usuario']
+
+        # Seleciona o tipo do usuário
+        cursor.execute('''
+            SELECT TIPO_USUARIO
+            FROM USUARIO
+            WHERE ID_USUARIO = ?
+        ''', (id_usuario,))
+
+        user_exist = cursor.fetchone()
+
+        # Retorna caso usuário não exista
+        if not user_exist:
+            return jsonify({
+                'error': 'Usuário não encontrado.'
+            }), 404
+
+        # Obtém o tipo do usuário
+        tipo_usuario = user_exist[0]
+
+        # Retorna caso o usuário não seja ADM, médico, enfermeiro ou recepcionista
+        if tipo_usuario not in [1,2,3,4]:
+            return jsonify({
+                'error': 'Requisição não autorizada.'
+            }), 401
+
+
+        # Obtém todos os usuários
+        cursor.execute('''
+            SELECT NOME, EMAIL, CPF, TELEFONE, DATA_NASCIMENTO, SEXO, TIPO_USUARIO, COREN_CRM_SUS
+            FROM USUARIO
+        ''', (id_usuario,))
+
+        data = cursor.fetchall()
+
+        if not data:
+            return jsonify({
+                'error': 'Nenhum usuário encontrado.'
+            }), 404
+
+        users = []
+
+        for user in data:
+            users.append({
+                'nome': user[0],
+                'email': user[1],
+                'cpf': user[2],
+                'telefone': user[3],
+                'data_nascimento': user[4],
+                'sexo': user[5],
+                'tipo_usuario': user[6],
+                'coren_crm_sus': user[7]
+            })
+
+        return jsonify({
+            "users": users
+        }), 200
+    except Exception as e:
+        # Retorna caso ocorra erro inesperado
+        return jsonify({
+            'error': str(e)
+        })
+    finally:
+        # Fecha o cursor ao final
+        cursor.close()

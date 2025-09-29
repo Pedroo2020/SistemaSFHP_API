@@ -1,9 +1,14 @@
+import eventlet
+eventlet.monkey_patch()
+
 from flask import Flask
-from flask_cors import CORS
 import fdb
+from flask_socketio import SocketIO
+from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, origins=["*"])
+CORS(app, origins=['*'])
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 app.config.from_pyfile('config.py')
 
@@ -33,4 +38,4 @@ from login_view import *
 from consulta_view import *
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    socketio.run(app, port=5000)

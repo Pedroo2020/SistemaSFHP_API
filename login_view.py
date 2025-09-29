@@ -1,7 +1,10 @@
 from flask import request, jsonify
 import jwt
 from flask_bcrypt import check_password_hash
-from main import app, con, senha_secreta
+from main import app, con, senha_secreta, socketio
+from components.socketio import usuarios_conectados
+from flask_socketio import emit
+from components.utils import validar_token
 
 def generate_token(user_id, cpf):
     payload = {'id_usuario': user_id, 'cpf': cpf}
@@ -113,3 +116,23 @@ def login():
     finally:
         # Fecha o cursor ao final
         cursor.close()
+
+# Autenticar Socket.io
+@socketio.on('autenticar')
+def autenticar(token):
+
+    if not token:
+        emit("autenticado", {"error": "Sessão não informada."})
+        return False
+
+    token_valido, payload = validar_token(token)
+
+    if not token_valido:
+        emit("autenticado", {"error": "Sessão inválida."})
+        return False
+
+    id_usuario = payload['id_usuario']
+
+    usuarios_conectados[id_usuario] = request.sid
+    print(f"Usuário {id_usuario} autenticado no socket {request.sid}")
+    emit("autenticado", {"msg": f"Usuário autenticado com sucesso!", "error": False})

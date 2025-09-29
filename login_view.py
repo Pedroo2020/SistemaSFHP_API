@@ -2,7 +2,6 @@ from flask import request, jsonify
 import jwt
 from flask_bcrypt import check_password_hash
 from main import app, con, senha_secreta
-import re
 
 def generate_token(user_id, cpf):
     payload = {'id_usuario': user_id, 'cpf': cpf}

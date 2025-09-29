@@ -30,6 +30,7 @@ except Exception as e:
 
 from cadastro_view import *
 from login_view import *
+from consulta_view import *
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

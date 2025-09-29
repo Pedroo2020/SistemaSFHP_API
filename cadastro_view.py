@@ -167,7 +167,7 @@ def cadastro_post():
             INSERT INTO USUARIO
             (NOME, EMAIL, CPF, COREN_CRM_SUS, TELEFONE, SEXO, DATA_NASCIMENTO, TIPO_USUARIO, SENHA, TENTATIVA_ERRO, ATIVO)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1)
-        ''', (nome, email, cpf, coren_crm_sus, telefone, sexo, nascimento, tipo_usuario, senha_hash))
+        ''', (nome.upper(), email, cpf, coren_crm_sus, telefone, sexo, nascimento, tipo_usuario, senha_hash))
 
         # Salva as mudanças
         con.commit()

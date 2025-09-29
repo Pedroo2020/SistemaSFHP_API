@@ -1,5 +1,5 @@
-import eventlet
-eventlet.monkey_patch()
+# import eventlet
+# eventlet.monkey_patch()
 
 from flask import Flask
 import fdb
@@ -38,4 +38,4 @@ from login_view import *
 from consulta_view import *
 
 if __name__ == '__main__':
-    socketio.run(app, port=5000)
+    socketio.run(app, port=5000, allow_unsafe_werkzeug=True)

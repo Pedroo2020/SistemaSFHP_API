@@ -60,7 +60,7 @@ def add_consulta():
         data = request.get_json()
 
         situacao = data.get('situacao')
-        cpf = request.args.get('cpf')
+        cpf = data.get('cpf')
 
         # Caso não tenha situação ou cpf, retorna
         if not situacao or not cpf:
@@ -111,7 +111,7 @@ def add_consulta():
 
         return jsonify({
             'success': 'Consulta cadastrada com sucesso!'
-        }), 400
+        }), 200
 
     except Exception as e:
         return jsonify({

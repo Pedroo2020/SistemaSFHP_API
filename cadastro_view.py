@@ -386,3 +386,174 @@ def get_all_users():
     finally:
         # Fecha o cursor ao final
         cursor.close()
+
+@app.route('/cadastro', methods=['PUT'])
+def editar_user():
+    # Obtém o token
+    token = request.headers.get('Authorization')
+
+    # Retorna caso não tenha token
+    if not token:
+        return jsonify({'error': 'Token de autenticação necessário'}), 401
+
+    try:
+        cursor = con.cursor()
+
+        # Remove o bearer
+        token = remover_bearer(token)
+
+        # Valida o token
+        token_valido, payload = validar_token(token)
+
+        # Retorna caso token inválido
+        if not token_valido:
+            return jsonify({
+                'error': payload
+            }), 401
+
+        # Obtém o id_usuario
+        id_usuario = payload['id_usuario']
+
+        # Obtém o tipo do usuário
+        cursor.execute('''
+                SELECT TIPO_USUARIO
+                FROM USUARIO
+                WHERE ID_USUARIO = ?
+            ''', (id_usuario,))
+
+        tipo_usuario_token = cursor.fetchone()[0]
+
+        # Obtém os dados
+        data = request.get_json()
+
+        nome = data.get('nome')
+        email = data.get('email')
+        cpf = data.get('cpf')
+        coren_crm_sus = data.get('coren_crm_sus')
+        telefone = data.get('telefone')
+        sexo = data.get('sexo')
+        nascimento = data.get('nascimento')
+        tipo_usuario = data.get('tipo_usuario')
+        senha = data.get('senha')
+
+        # Retorna caso dados incompletos
+        if not nome or not email or not cpf or not telefone or not sexo or not nascimento or not tipo_usuario:
+            return jsonify({
+                'error': 'Dados incompletos.'
+            }), 400
+
+        # Usuário não for ADM, retorna
+        if tipo_usuario_token != 1:
+
+            if tipo_usuario_token != 4:
+                return jsonify({
+                    'error': 'Usuário não autorizado.'
+                }), 401
+
+            elif tipo_usuario != 5:
+                return jsonify({
+                    'error': 'Atualização de tipo de usuário não autorizada.'
+                }), 401
+
+            # Valida o CPF e telefone
+            cpf_valido = validar_cpf(cpf)
+            telefone_valido = validar_telefone(telefone)
+
+            # CPF inválido
+            if not cpf_valido:
+                return jsonify({
+                    'error': 'CPF inválido.'
+                }), 400
+
+            # Telefone inválido
+            if not telefone_valido:
+                return jsonify({
+                    'error': 'Telefone inválido.'
+                }), 400
+
+        # SUS e coren inválidos
+        if tipo_usuario == 5:
+
+            # Verifica se o usuário informou o documento
+            if not coren_crm_sus:
+                return jsonify({
+                    'error': 'Informe o número do SUS.'
+                }), 400
+
+            sus_valido = validar_sus(coren_crm_sus)
+
+            if not sus_valido:
+                return jsonify({
+                    'error': 'Número do SUS inválido.'
+                }), 400
+
+            # Caso o usuário seja paciente, gera senha a partir do número do sus
+            senha_hash = generate_password_hash(coren_crm_sus)
+
+        else:
+            # Caso seja médico ou enfermeiro, verifica CRM / COREN
+            if tipo_usuario in [2, 3]:
+
+                # Verifica se o usuário informou o documento
+                if not coren_crm_sus:
+                    return jsonify({
+                        'error': f'Informe o {'CRM' if tipo_usuario == 2 else 'COREN'}.'
+                    }), 400
+
+                crm_coren_valido = validar_coren_crm(coren_crm_sus)
+
+                if not crm_coren_valido:
+                    return jsonify({
+                        'error': f'{'CRM' if tipo_usuario == 2 else 'COREN'} inválido.'
+                    }), 400
+
+            # Caso a senha não for informada
+            if not senha:
+                return jsonify({
+                    'error': 'Informe a senha.'
+                }), 400
+
+            # Verifica se a senha é forte
+            senha_valida = validar_senha(senha)
+
+            # Retorna o erro da senha
+            if senha_valida is not True:
+                return jsonify({
+                    'error': senha_valida
+                }), 400
+
+            # Gera a senha criptografada
+            senha_hash = generate_password_hash(senha)
+
+        # Caso os dados já existam, retorna
+        user_exists = cursor.fetchone()
+
+        if user_exists:
+            cursor.close()
+            return jsonify({
+                'error': 'Dados já cadastrados.'
+            }), 401
+
+        # Cadastro os novos dados do usuário no banco
+        cursor.execute('''
+                UPDATE USUARIO
+                SET NOME = ?, EMAIL = ?, CPF = ?, COREN_CRM_SUS = ?, TELEFONE = ?, SEXO = ?, DATA_NASCIMENTO = ?, TIPO_USUARIO = ?, SENHA = ?
+                WHERE CPF = ?
+            ''', (nome, email, cpf, coren_crm_sus, telefone, sexo, nascimento, tipo_usuario, senha_hash, cpf))
+
+        # Salva as mudanças
+        con.commit()
+
+        # Retorna sucesso
+        return jsonify({
+            'success': 'Usuário editado com sucesso!'
+        }), 200
+
+    except Exception as e:
+        # Retorna caso ocorra erro inesperado
+        return jsonify({
+            'error': str(e)
+        })
+    finally:
+        # Fecha o cursor ao final
+        cursor.close()

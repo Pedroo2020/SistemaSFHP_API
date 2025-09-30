@@ -121,8 +121,8 @@ def add_consulta():
     finally:
         cursor.close()
 
-@app.route('/consultas', methods=['GET'])
-def get_consultas():
+@app.route('/consultas/<int:situacao>', methods=['GET'])
+def get_consultas(situacao):
     # Obtém o token
     token = request.headers.get('Authorization')
 
@@ -177,44 +177,28 @@ def get_consultas():
 
         # Busca os dados
         cursor.execute("""    
-            SELECT c.DATA_ENTRADA 
-                  , CASE c.SITUACAO 
-                        WHEN 1 THEN 'Entrada'
-                        WHEN 2 THEN 'Triagem'
-                        WHEN 3 THEN 'Em espera'
-                        WHEN 4 THEN 'Consulta'
-                        WHEN 5 THEN 'Alta'
-                    ELSE ''
-                    END AS SITUACAO
-                  , pa.NOME 
-                  , case pa.SEXO 
-                      WHEN 1 THEN 'Masculino'
-                      WHEN 2 THEN 'Feminino'
-                     ELSE '' 
-                    END AS sexo
-                  , DATEDIFF(YEAR, pa.DATA_NASCIMENTO, CURRENT_DATE) IDADE
-                  , CASE TR.CLASSIFICACAO_RISCO
-                      WHEN 1 THEN 'Azul (Leve)'
-                      WHEN 2 THEN 'Verde (Pouco urgente)'
-                      WHEN 3 THEN 'Amarelo (Urgente)'
-                      WHEN 4 THEN 'Laranja (Muito urgente)'
-                      WHEN 5 THEN 'Vermelho (Risco de vida)'
-                     ELSE '' 
-                     END AS CLASSIFICACAO_RISCO 
-                     , DATEDIFF(MINUTE, C.DATA_ENTRADA, CURRENT_TIMESTAMP ) TEMPO_DECORRIDO
-            FROM CONSULTA c 
-            LEFT JOIN USUARIO pa ON pa.ID_USUARIO = c.ID_USUARIO 
-            LEFT JOIN TRIAGEM TR ON TR.ID_CONSULTA = C.ID_CONSULTA
-            ORDER BY c.DATA_ENTRADA
-        """)
+                          SELECT DATA_ENTRADA
+                               , SITUACAO 
+                               , NOME 
+                               , SEXO 
+                               , IDADE
+                               , CLASSIFICACAO_RISCO 
+                               , TEMPO_DECORRIDO
+                            FROM PR_LISTA_CONSULTA(?)
+                       """, (situacao,))
 
         res = cursor.fetchall()
 
         consultas = []
 
+        posicao = 0
+
         if res:
             for consulta in res:
+                posicao = posicao + 1
+
                 consultas.append({
+                    "posicao": posicao,
                     "data_entrada": consulta[0].strftime("%d/%m/%Y %H:%M") if consulta[0] else None,
                     "situacao": consulta[1].strip('  '),
                     "nome": consulta[2],

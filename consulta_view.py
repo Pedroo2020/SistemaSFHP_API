@@ -168,12 +168,10 @@ def get_consultas(situacao):
         tipo_usuario = int(result[0])
 
         # Se o usuário não for ADM
-        if tipo_usuario != 1:
-            # Se o usuário não for paciente, retorna
-            if tipo_usuario != 4:
-                return jsonify({
-                    'error': 'Usuário não autorizado.'
-                }), 401
+        if tipo_usuario not in [1, 2, 3, 4]:
+            return jsonify({
+                'error': 'Usuário não autorizado.'
+            }), 401
 
         # Busca os dados
         cursor.execute("""    
@@ -184,6 +182,7 @@ def get_consultas(situacao):
                                , IDADE
                                , CLASSIFICACAO_RISCO 
                                , TEMPO_DECORRIDO
+                               , CPF
                             FROM PR_LISTA_CONSULTA(?)
                        """, (situacao,))
 
@@ -205,7 +204,8 @@ def get_consultas(situacao):
                     "sexo": consulta[3],
                     "idade": consulta[4],
                     "classificacao_risco": consulta[5].strip() if consulta[5] else None,
-                    "tempo_decorrido": consulta[6]
+                    "tempo_decorrido": consulta[6],
+                    "cpf": consulta[7]
                 })
 
         return jsonify({

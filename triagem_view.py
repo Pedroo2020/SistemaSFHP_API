@@ -281,7 +281,7 @@ def update_triagem():
         con.commit()
 
         return jsonify({
-            'success': 'Triagem iniciada com sucesso!'
+            'success': 'Triagem cadastrada com sucesso!'
         }), 200
 
     except Exception as e:

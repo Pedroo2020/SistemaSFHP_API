@@ -35,10 +35,19 @@ def cadastro_post():
         cursor.execute('''
             SELECT TIPO_USUARIO
             FROM USUARIO
-            WHERE ID_USUARIO = ?
+            WHERE ID_USUARIO = ? AND ATIVO = 1
         ''', (id_usuario,))
 
-        tipo_usuario_token = cursor.fetchone()[0]
+        result = cursor.fetchone()
+
+        # Usuário não encontrado
+        if not result:
+            return jsonify({
+                'error': 'Usuário não encontrado ou inativo.',
+                'logout': True
+            }), 404
+
+        tipo_usuario_token = result[0]
 
         # Obtém os dados
         data = request.get_json()
@@ -233,10 +242,19 @@ def get_cadastro():
             cursor.execute('''
                 SELECT TIPO_USUARIO
                 FROM USUARIO
-                WHERE ID_USUARIO = ?
+                WHERE ID_USUARIO = ? AND ATIVO = 1
             ''', (id_usuario,))
 
-            tipo_user_token = cursor.fetchone()[0]
+            result = cursor.fetchone()
+
+            # Usuário não encontrado
+            if not result:
+                return jsonify({
+                    'error': 'Usuário não encontrado ou inativo.',
+                    'logout': True
+                }), 404
+
+            tipo_user_token = result[0]
 
             # Caso não seja funcionário, retorna
             if tipo_user_token not in [1, 2, 3, 4]:
@@ -330,7 +348,7 @@ def get_all_users():
         cursor.execute('''
             SELECT TIPO_USUARIO
             FROM USUARIO
-            WHERE ID_USUARIO = ?
+            WHERE ID_USUARIO = ? AND ATIVO = 1
         ''', (id_usuario,))
 
         user_exist = cursor.fetchone()
@@ -338,7 +356,8 @@ def get_all_users():
         # Retorna caso usuário não exista
         if not user_exist:
             return jsonify({
-                'error': 'Usuário não encontrado.'
+                'error': 'Usuário não encontrado ou inativo.',
+                'logout': True
             }), 404
 
         # Obtém o tipo do usuário
@@ -421,7 +440,7 @@ def editar_user():
         cursor.execute('''
                 SELECT TIPO_USUARIO
                 FROM USUARIO
-                WHERE ID_USUARIO = ?
+                WHERE ID_USUARIO = ? AND ATIVO = 1
             ''', (id_usuario,))
 
         tipo_usuario_token = cursor.fetchone()[0]
@@ -569,6 +588,117 @@ def editar_user():
         return jsonify({
             'error': str(e)
         })
+    finally:
+        # Fecha o cursor ao final
+        cursor.close()
+
+@app.route('/cadastro', methods=['DELETE'])
+def inativar_user():
+    # Obtém o token
+    token = request.headers.get('Authorization')
+
+    # Retorna caso não tenha token
+    if not token:
+        return jsonify({'error': 'Token de autenticação necessário'}), 401
+
+    try:
+        cursor = con.cursor()
+
+        # Remove o bearer
+        token = remover_bearer(token)
+
+        # Valida o token
+        token_valido, payload = validar_token(token)
+
+        # Retorna caso token inválido
+        if not token_valido:
+            return jsonify({
+                'error': payload
+            }), 401
+
+        # Obtém o id_usuario
+        id_usuario = payload['id_usuario']
+
+        # Obtém o tipo do usuário
+        cursor.execute('''
+                    SELECT TIPO_USUARIO, CPF
+                    FROM USUARIO
+                    WHERE ID_USUARIO = ? AND ATIVO = 1
+                ''', (id_usuario,))
+
+        response = cursor.fetchone()
+
+        # Usuário não encontrado
+        if not response:
+            return jsonify({
+                'error': 'Usuário não encontrado ou inativo.',
+                'logout': True
+            }), 404
+
+        tipo_usuario_token = response[0]
+        cpfToken = response[1]
+
+        if tipo_usuario_token not in [1, 5]:
+            return jsonify({
+                'error': 'Usuário não autorizado.'
+            }), 401
+
+        data = request.get_json()
+
+        cpf = data.get('cpf')
+
+        if not cpf:
+            return jsonify({
+                'error': 'Informe o CPF;'
+            }), 400
+
+        if tipo_usuario_token == 5:
+            if cpf != cpfToken:
+                return jsonify({
+                    'error': 'Ação não permitida.'
+                }), 401
+
+        # Verifica se o CPF está cadastrado
+        cursor.execute('''
+            SELECT ATIVO
+            FROM USUARIO
+            WHERE CPF = ?
+        ''', (cpf,))
+
+        user_found = cursor.fetchone()
+
+        if not user_found:
+            return jsonify({
+                'error': 'Usuário não encontrado.'
+            }), 404
+
+        ativo = user_found[0]
+
+        if int(ativo) == 0:
+            return jsonify({
+                'error': 'Usuário já inativo.'
+            }), 400
+
+        # Inativa o usuário pelo CPF
+        cursor.execute('''
+            UPDATE USUARIO
+            SET ATIVO = 0
+            WHERE CPF = ?
+        ''', (cpf,))
+
+        con.commit()
+
+        # Retorna sucesso
+        return jsonify({
+            'success': 'Usuário inativado com sucesso!'
+        }), 200
+
+    except Exception as e:
+        # Retorna caso ocorra erro inesperado
+        return jsonify({
+            'error': str(e)
+        }), 500
+
     finally:
         # Fecha o cursor ao final
         cursor.close()

@@ -35,7 +35,7 @@ def add_consulta():
         cursor.execute('''
             SELECT TIPO_USUARIO
             FROM USUARIO
-            WHERE ID_USUARIO = ?
+            WHERE ID_USUARIO = ? AND ATIVO = 1
         ''', (id_usuario,))
 
         result = cursor.fetchone()
@@ -43,7 +43,8 @@ def add_consulta():
         # Usuário não encontrado
         if not result:
             return jsonify({
-                'error': 'Usuário não encontrado.'
+                'error': 'Usuário não encontrado ou inativo.',
+                'logout': True
             }), 404
 
         # Obtém o tipo do usuário
@@ -153,7 +154,7 @@ def get_consultas(situacao):
         cursor.execute('''
             SELECT TIPO_USUARIO
             FROM USUARIO
-            WHERE ID_USUARIO = ?
+            WHERE ID_USUARIO = ? AND ATIVO = 1
         ''', (id_usuario,))
 
         result = cursor.fetchone()
@@ -161,7 +162,8 @@ def get_consultas(situacao):
         # Usuário não encontrado
         if not result:
             return jsonify({
-                'error': 'Usuário não encontrado.'
+                'error': 'Usuário não encontrado ou inativo.',
+                'logout': True
             }), 404
 
         # Obtém o tipo do usuário

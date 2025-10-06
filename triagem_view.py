@@ -35,7 +35,7 @@ def start_triagem():
         cursor.execute('''
             SELECT TIPO_USUARIO
             FROM USUARIO
-            WHERE ID_USUARIO = ?
+            WHERE ID_USUARIO = ? AND ATIVO = 1
         ''', (id_usuario,))
 
         result = cursor.fetchone()
@@ -43,7 +43,8 @@ def start_triagem():
         # Usuário não encontrado
         if not result:
             return jsonify({
-                'error': 'Usuário não encontrado.'
+                'error': 'Usuário não encontrado ou inativo.',
+                'logout': True
             }), 404
 
         # Obtém o tipo do usuário
@@ -156,7 +157,7 @@ def update_triagem():
         cursor.execute('''
             SELECT TIPO_USUARIO
             FROM USUARIO
-            WHERE ID_USUARIO = ?
+            WHERE ID_USUARIO = ? AND ATIVO = 1
         ''', (id_usuario,))
 
         result = cursor.fetchone()
@@ -164,7 +165,8 @@ def update_triagem():
         # Usuário não encontrado
         if not result:
             return jsonify({
-                'error': 'Usuário não encontrado.'
+                'error': 'Usuário não encontrado ou inativo.',
+                'logout': True
             }), 404
 
         # Obtém o tipo do usuário

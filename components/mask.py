@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 
 # Validar senha
 def validar_senha(senha):
@@ -104,3 +105,19 @@ def validar_telefone(telefone: str) -> bool:
     # 10 dígitos (fixo: DDD + 8)
     # 11 dígitos (celular: DDD + 9 + 8)
     return len(num) in (10, 11)
+
+def validar_nascimento(data):
+    if data:
+        try:
+            # Converte a string em objeto datetime
+            nascimento = datetime.strptime(data, "%Y-%m-%d").date()
+            hoje = datetime.today().date()
+
+            if nascimento > hoje:
+                # Data inválida: é no futuro
+                return False
+
+            return True
+        except ValueError:
+            # Formato de data inválido
+            return False

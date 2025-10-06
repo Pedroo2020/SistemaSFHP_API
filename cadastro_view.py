@@ -1,9 +1,9 @@
 from flask import jsonify, request
-from main import app, con, senha_secreta
+from main import app, con
 from flask_bcrypt import generate_password_hash
-import jwt
-from components.mask import validar_senha, validar_cpf, validar_sus, validar_coren_crm, validar_telefone
+from components.mask import validar_senha, validar_cpf, validar_sus, validar_coren_crm, validar_telefone, validar_nascimento
 from components.utils import remover_bearer, validar_token
+from datetime import datetime
 
 @app.route('/cadastro', methods=['POST'])
 def cadastro_post():
@@ -73,21 +73,34 @@ def cadastro_post():
                     'error': 'Cadastro de tipo de usuário não autorizado.'
                 }), 401
 
-            # Valida o CPF e telefone
-            cpf_valido = validar_cpf(cpf)
-            telefone_valido = validar_telefone(telefone)
+        # Valida o CPF e telefone
+        cpf_valido = validar_cpf(cpf)
+        telefone_valido = validar_telefone(telefone)
+        nascimento_valido = validar_nascimento(nascimento)
+        crm_coren_valido = validar_coren_crm(coren_crm_sus)
 
-            # CPF inválido
-            if not cpf_valido:
-                return jsonify({
-                    'error': 'CPF inválido.'
-                }), 400
+        if not crm_coren_valido:
+            return jsonify({
+                'error': f'{'CRM' if tipo_usuario == 2 else 'COREN'} inválido.'
+            }), 400
 
-            # Telefone inválido
-            if not telefone_valido:
-                return jsonify({
-                    'error': 'Telefone inválido.'
-                }), 400
+        # CPF inválido
+        if not cpf_valido:
+            return jsonify({
+                'error': 'CPF inválido.'
+            }), 400
+
+        # Telefone inválido
+        if not telefone_valido:
+            return jsonify({
+                'error': 'Telefone inválido.'
+            }), 400
+
+        # Data de nacimento inválida
+        if not nascimento_valido:
+            return jsonify({
+                'error': 'Data de nascimento inválida.'
+            }), 400
 
         # Declara a variável vazia para poder alterá-la depois
         senha_hash = ""

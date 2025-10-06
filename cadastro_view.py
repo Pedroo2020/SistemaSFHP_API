@@ -72,16 +72,10 @@ def cadastro_post():
                     'error': 'Cadastro de tipo de usuário não autorizado.'
                 }), 401
 
-        # Valida o CPF e telefone
+        # Valida o CPF, telefone e a data de nascimento
         cpf_valido = validar_cpf(cpf)
         telefone_valido = validar_telefone(telefone)
         nascimento_valido = validar_nascimento(nascimento)
-        crm_coren_valido = validar_coren_crm(coren_crm_sus)
-
-        if not crm_coren_valido:
-            return jsonify({
-                'error': f'{'CRM' if tipo_usuario == 2 else 'COREN'} inválido.'
-            }), 400
 
         # CPF inválido
         if not cpf_valido:
@@ -100,9 +94,6 @@ def cadastro_post():
             return jsonify({
                 'error': 'Data de nascimento inválida.'
             }), 400
-
-        # Declara a variável vazia para poder alterá-la depois
-        senha_hash = ""
 
         # SUS e coren inválidos
         if tipo_usuario == 5:
@@ -440,7 +431,8 @@ def editar_user():
 
         nome = data.get('nome')
         email = data.get('email')
-        cpf = data.get('cpf')
+        cpfNovo = data.get('cpfNovo')
+        cpfAntigo = data.get('cpfAntigo')
         coren_crm_sus = data.get('coren_crm_sus')
         telefone = data.get('telefone')
         sexo = data.get('sexo')
@@ -448,8 +440,31 @@ def editar_user():
         tipo_usuario = data.get('tipo_usuario')
         senha = data.get('senha')
 
+        # Valida o CPF e telefone
+        cpf_valido = validar_cpf(cpfNovo)
+        telefone_valido = validar_telefone(telefone)
+        nascimento_valido = validar_nascimento(nascimento)
+
+        # CPF inválido
+        if not cpf_valido:
+            return jsonify({
+                'error': 'CPF inválido.'
+            }), 400
+
+        # Telefone inválido
+        if not telefone_valido:
+            return jsonify({
+                'error': 'Telefone inválido.'
+            }), 400
+
+        # Data de nacimento inválida
+        if not nascimento_valido:
+            return jsonify({
+                'error': 'Data de nascimento inválida.'
+            }), 400
+
         # Retorna caso dados incompletos
-        if not nome or not email or not cpf or not telefone or not sexo or not nascimento or not tipo_usuario:
+        if not nome or not email or not cpfNovo or not telefone or not sexo or not nascimento or not tipo_usuario:
             return jsonify({
                 'error': 'Dados incompletos.'
             }), 400
@@ -466,22 +481,6 @@ def editar_user():
                 return jsonify({
                     'error': 'Atualização de tipo de usuário não autorizada.'
                 }), 401
-
-            # Valida o CPF e telefone
-            cpf_valido = validar_cpf(cpf)
-            telefone_valido = validar_telefone(telefone)
-
-            # CPF inválido
-            if not cpf_valido:
-                return jsonify({
-                    'error': 'CPF inválido.'
-                }), 400
-
-            # Telefone inválido
-            if not telefone_valido:
-                return jsonify({
-                    'error': 'Telefone inválido.'
-                }), 400
 
         # SUS e coren inválidos
         if tipo_usuario == 5:
@@ -519,24 +518,6 @@ def editar_user():
                         'error': f'{'CRM' if tipo_usuario == 2 else 'COREN'} inválido.'
                     }), 400
 
-            # Caso a senha não for informada
-            if not senha:
-                return jsonify({
-                    'error': 'Informe a senha.'
-                }), 400
-
-            # Verifica se a senha é forte
-            senha_valida = validar_senha(senha)
-
-            # Retorna o erro da senha
-            if senha_valida is not True:
-                return jsonify({
-                    'error': senha_valida
-                }), 400
-
-            # Gera a senha criptografada
-            senha_hash = generate_password_hash(senha)
-
         # Caso os dados já existam, retorna
         user_exists = cursor.fetchone()
 
@@ -546,12 +527,34 @@ def editar_user():
                 'error': 'Dados já cadastrados.'
             }), 401
 
+        # Parâmetros da query
+        params = [nome, email, cpfNovo, coren_crm_sus or "", telefone, sexo, nascimento, tipo_usuario]
+
+        if tipo_usuario in [1, 2, 3, 4]:
+            # Caso a senha não for informada
+            if senha:
+                # Verifica se a senha é forte
+                senha_valida = validar_senha(senha)
+
+                # Retorna o erro da senha
+                if senha_valida is not True:
+                    return jsonify({
+                        'error': senha_valida
+                    }), 400
+
+                # Gera a senha criptografada
+                senha_hash = generate_password_hash(senha)
+
+                params.append(senha_hash)
+
+        params.append(cpfAntigo)
+
         # Cadastro os novos dados do usuário no banco
-        cursor.execute('''
+        cursor.execute(f'''
                 UPDATE USUARIO
-                SET NOME = ?, EMAIL = ?, CPF = ?, COREN_CRM_SUS = ?, TELEFONE = ?, SEXO = ?, DATA_NASCIMENTO = ?, TIPO_USUARIO = ?, SENHA = ?
+                SET NOME = ?, EMAIL = ?, CPF = ?, COREN_CRM_SUS = ?, TELEFONE = ?, SEXO = ?, DATA_NASCIMENTO = ?, TIPO_USUARIO = ? {', SENHA = ?' if senha else ''}
                 WHERE CPF = ?
-            ''', (nome, email, cpf, coren_crm_sus, telefone, sexo, nascimento, tipo_usuario, senha_hash, cpf))
+            ''', (params))
 
         # Salva as mudanças
         con.commit()

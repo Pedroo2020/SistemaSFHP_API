@@ -4,7 +4,7 @@ from flask_bcrypt import check_password_hash
 from main import app, con, senha_secreta, socketio
 import json
 from flask_socketio import emit
-from components.utils import validar_token, remover_bearer
+from components.utils import validar_token
 
 
 def generate_token(user_id, cpf):

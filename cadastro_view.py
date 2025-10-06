@@ -3,7 +3,6 @@ from main import app, con
 from flask_bcrypt import generate_password_hash
 from components.mask import validar_senha, validar_cpf, validar_sus, validar_coren_crm, validar_telefone, validar_nascimento
 from components.utils import remover_bearer, validar_token
-from datetime import datetime
 
 @app.route('/cadastro', methods=['POST'])
 def cadastro_post():

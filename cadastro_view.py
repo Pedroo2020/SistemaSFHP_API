@@ -537,6 +537,13 @@ def editar_user():
                         'error': f'{'CRM' if tipo_usuario == 2 else 'COREN'} inválido.'
                     }), 400
 
+        # Verifica se os dados já estão cadastrados
+        cursor.execute('''
+                SELECT 1 
+                FROM USUARIO
+                WHERE CPF = ? OR EMAIL = ? OR TELEFONE = ? OR COREN_CRM_SUS = ?
+            ''', (cpfNovo, email, telefone, coren_crm_sus))
+
         # Caso os dados já existam, retorna
         user_exists = cursor.fetchone()
 

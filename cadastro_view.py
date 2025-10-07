@@ -264,7 +264,7 @@ def get_cadastro():
 
             # Obtém os dados do CPF
             cursor.execute('''
-                SELECT NOME, EMAIL, CPF, TELEFONE, DATA_NASCIMENTO, SEXO, TIPO_USUARIO, COREN_CRM_SUS
+                SELECT NOME, EMAIL, CPF, TELEFONE, DATA_NASCIMENTO, SEXO, TIPO_USUARIO, COREN_CRM_SUS, ATIVO
                 FROM USUARIO
                 WHERE cpf = ?
             ''', (cpf_param,))
@@ -273,7 +273,7 @@ def get_cadastro():
 
             # Obtém pelo id do usuário
             cursor.execute('''
-                SELECT NOME, EMAIL, CPF, TELEFONE, DATA_NASCIMENTO, SEXO, TIPO_USUARIO, COREN_CRM_SUS
+                SELECT NOME, EMAIL, CPF, TELEFONE, DATA_NASCIMENTO, SEXO, TIPO_USUARIO, COREN_CRM_SUS, ATIVO
                 FROM USUARIO
                 WHERE ID_USUARIO = ?
             ''', (id_usuario,))
@@ -294,6 +294,7 @@ def get_cadastro():
         sexo = data[5]
         tipo_usuario = data[6]
         coren_crm_sus = data[7]
+        ativo = data[8]
 
         return jsonify({
             "user": {
@@ -304,7 +305,8 @@ def get_cadastro():
                 "data_nascimento": data_nascimento,
                 "sexo": sexo,
                 "tipo_usuario": tipo_usuario,
-                "coren_crm_sus": coren_crm_sus
+                "coren_crm_sus": coren_crm_sus,
+                "ativo": ativo
             }
         }), 200
     except Exception as e:
@@ -698,6 +700,118 @@ def inativar_user():
         # Retorna sucesso
         return jsonify({
             'success': 'Usuário inativado com sucesso!'
+        }), 200
+
+    except Exception as e:
+        # Retorna caso ocorra erro inesperado
+        return jsonify({
+            'error': str(e)
+        }), 500
+
+    finally:
+        # Fecha o cursor ao final
+        cursor.close()
+
+
+@app.route('/cadastro/ativar', methods=['PUT'])
+def ativar_user():
+    # Obtém o token
+    token = request.headers.get('Authorization')
+
+    # Retorna caso não tenha token
+    if not token:
+        return jsonify({'error': 'Token de autenticação necessário'}), 401
+
+    try:
+        cursor = con.cursor()
+
+        # Remove o bearer
+        token = remover_bearer(token)
+
+        # Valida o token
+        token_valido, payload = validar_token(token)
+
+        # Retorna caso token inválido
+        if not token_valido:
+            return jsonify({
+                'error': payload
+            }), 401
+
+        # Obtém o id_usuario
+        id_usuario = payload['id_usuario']
+
+        # Obtém o tipo do usuário
+        cursor.execute('''
+                    SELECT TIPO_USUARIO, CPF
+                    FROM USUARIO
+                    WHERE ID_USUARIO = ?
+                ''', (id_usuario,))
+
+        response = cursor.fetchone()
+
+        # Usuário não encontrado
+        if not response:
+            return jsonify({
+                'error': 'Usuário não encontrado ou inativo.',
+                'logout': True
+            }), 404
+
+        tipo_usuario_token = response[0]
+        cpfToken = response[1]
+
+        if tipo_usuario_token not in [1, 5]:
+            return jsonify({
+                'error': 'Usuário não autorizado.'
+            }), 401
+
+        data = request.get_json()
+
+        cpf = data.get('cpf')
+
+        if not cpf:
+            return jsonify({
+                'error': 'Informe o CPF;'
+            }), 400
+
+        if tipo_usuario_token == 5:
+            if cpf != cpfToken:
+                return jsonify({
+                    'error': 'Ação não permitida.'
+                }), 401
+
+        # Verifica se o CPF está cadastrado
+        cursor.execute('''
+            SELECT ATIVO
+            FROM USUARIO
+            WHERE CPF = ?
+        ''', (cpf,))
+
+        user_found = cursor.fetchone()
+
+        if not user_found:
+            return jsonify({
+                'error': 'Usuário não encontrado.'
+            }), 404
+
+        ativo = user_found[0]
+
+        if int(ativo) == 1:
+            return jsonify({
+                'error': 'Usuário já ativo.'
+            }), 400
+
+        # Inativa o usuário pelo CPF
+        cursor.execute('''
+            UPDATE USUARIO
+            SET ATIVO = 1
+            WHERE CPF = ?
+        ''', (cpf,))
+
+        con.commit()
+
+        # Retorna sucesso
+        return jsonify({
+            'success': 'Usuário ativado com sucesso!'
         }), 200
 
     except Exception as e:

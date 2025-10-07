@@ -55,7 +55,8 @@ def add_consulta():
             # Se o usuário não for paciente, retorna
             if tipo_usuario != 4:
                 return jsonify({
-                    'error': 'Usuário não autorizado.'
+                    'error': 'Usuário não autorizado.',
+                    'logout': True
                 }), 401
 
         # Obtém os dados
@@ -172,7 +173,8 @@ def get_consultas(situacao):
         # Se o usuário não for ADM
         if tipo_usuario not in [1, 2, 3, 4]:
             return jsonify({
-                'error': 'Usuário não autorizado.'
+                'error': 'Usuário não autorizado.',
+                'logout': True
             }), 401
 
         # Busca os dados

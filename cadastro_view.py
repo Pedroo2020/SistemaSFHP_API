@@ -541,10 +541,10 @@ def editar_user():
 
         # Verifica se os dados já estão cadastrados
         cursor.execute('''
-                SELECT 1 
-                FROM USUARIO
-                WHERE CPF = ? OR EMAIL = ? OR TELEFONE = ? OR COREN_CRM_SUS = ?
-            ''', (cpfNovo, email, telefone, coren_crm_sus))
+                    SELECT 1 
+                    FROM USUARIO
+                    WHERE (CPF != ?) AND (CPF = ? OR EMAIL = ? OR TELEFONE = ? OR COREN_CRM_SUS = ?)
+                ''', (cpfAntigo, cpfNovo, email, telefone, coren_crm_sus))
 
         # Caso os dados já existam, retorna
         user_exists = cursor.fetchone()

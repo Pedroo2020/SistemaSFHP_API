@@ -8,4 +8,4 @@ DB_PASSWORD = 'sysdba'
 
 UPLOAD_FOLDER = 'upload'
 
-SENHA_APP_EMAIL = 'na'
+SENHA_APP_EMAIL = 'esrlvwreaoyhjnqq'

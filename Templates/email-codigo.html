@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>SFHP - Código de Verificação</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #FAFAFA; /* gray-100 */
+            margin: 0;
+            padding: 0;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #FFFFFF; /* white */
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(17, 102, 148, 0.15); /* leve toque do azul escuro */
+        }
+
+        .header {
+            text-align: center;
+            padding: 25px 20px;
+            background-color: #116694;
+        }
+
+        .header h1 {
+            font-size: 30px;
+            margin: 0;
+            letter-spacing: 1px;
+            color: #FFFFFF;
+        }
+
+        .content {
+            padding: 35px 40px;
+            border-top: 5px solid #116694; /* blue-dark */
+            border-bottom: 1px solid #ECECEC; /* gray-200 */
+        }
+
+        .content p {
+            line-height: 1.7;
+            margin-bottom: 22px;
+            font-size: 15px;
+            color: #444;
+        }
+
+        .greeting {
+            font-size: 20px;
+            color: #116694; /* blue-dark */
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+
+        .verification-box {
+            background-color: #C1E6FA; /* blue-light */
+            border-left: 4px solid #46A2D3; /* blue-base */
+            padding: 20px;
+            margin: 30px 0;
+            text-align: center;
+            border-radius: 6px;
+        }
+
+        .verification-title {
+            color: #116694; /* blue-dark */
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .codigo {
+            display: inline-block;
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 5px;
+            color: #116694; /* blue-dark */
+            padding: 12px 20px;
+            background-color: #FFFFFF; /* white */
+            border-radius: 6px;
+            border: 1px solid #ECECEC; /* gray-200 */
+            box-shadow: 0 2px 6px rgba(17, 102, 148, 0.15);
+        }
+
+        .footer {
+            background-color: #ECECEC; /* gray-200 */
+            text-align: center;
+            padding: 20px;
+            font-size: 13px;
+            color: #747474; /* gray-dark */
+        }
+
+        .footer-links {
+            margin-top: 10px;
+        }
+
+        .footer-links a {
+            color: #46A2D3; /* blue-base */
+            text-decoration: none;
+            margin: 0 10px;
+            font-weight: 500;
+        }
+
+        .footer-links a:hover {
+            color: #1876ac; /* blue-hover */
+            text-decoration: underline;
+        }
+
+        .notice {
+            font-size: 12px;
+            color: #bebebe; /* gray-300 */
+            margin-top: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SFHP</h1>
+        </div>
+        <div class="content">
+            <p class="greeting">Prezado(a) paciente,</p>
+
+            <p>Recebemos uma solicitação para recuperação de senha da sua conta <strong>SFHP</strong>. Para garantir a segurança dos seus dados e completar este processo, utilize o código de verificação abaixo:</p>
+
+            <div class="verification-box">
+                <div class="verification-title">SEU CÓDIGO DE VERIFICAÇÃO</div>
+                <div class="codigo">{{codigo}}</div>
+            </div>
+
+            <p>Este código é válido por <strong>10 minutos</strong>. Por favor, não compartilhe este código com ninguém, incluindo a equipe do SFHP, pois nossos colaboradores nunca solicitarão esta informação.</p>
+
+            <p>Se você não solicitou a alteração de senha, recomendamos que entre em contato com nossa equipe de suporte imediatamente para proteger sua conta.</p>
+        </div>
+        <div class="footer">
+            <p>&copy; {{ ano }} SFHP. Todos os direitos reservados.</p>
+            <div class="footer-links">
+                <a href="#">Termos de Uso</a>
+                <a href="#">Política de Privacidade</a>
+                <a href="#">Ajuda</a>
+            </div>
+            <p class="notice">Este é um e-mail automático, por favor não responda.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -39,4 +39,4 @@ from consulta_view import *
 from triagem_view import *
 
 if __name__ == '__main__':
-    socketio.run(app, port=5000, allow_unsafe_werkzeug=True)
+    socketio.run(app, port=5000, allow_unsafe_werkzeug=True, host="0.0.0.0")

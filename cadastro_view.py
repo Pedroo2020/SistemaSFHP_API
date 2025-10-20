@@ -556,7 +556,7 @@ def editar_user():
             }), 401
 
         # Parâmetros da query
-        params = [nome, email, cpfNovo, coren_crm_sus or "", telefone, sexo, nascimento, tipo_usuario]
+        params = [nome.upper(), email, cpfNovo, coren_crm_sus or "", telefone, sexo, nascimento, tipo_usuario]
 
         if tipo_usuario in [1, 2, 3, 4]:
             # Caso a senha não for informada
@@ -578,6 +578,7 @@ def editar_user():
         params.append(cpfAntigo)
 
         # Cadastro os novos dados do usuário no banco
+        # Caso a senha for informada, adiciona o código SQL para atualizar senha
         cursor.execute(f'''
                 UPDATE USUARIO
                 SET NOME = ?, EMAIL = ?, CPF = ?, COREN_CRM_SUS = ?, TELEFONE = ?, SEXO = ?, DATA_NASCIMENTO = ?, TIPO_USUARIO = ? {', SENHA = ?' if senha else ''}

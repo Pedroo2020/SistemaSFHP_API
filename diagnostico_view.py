@@ -73,7 +73,7 @@ def start_diagnostico():
         cursor.execute('''
             SELECT ID_USUARIO
             FROM USUARIO
-            WHERE CPF = ?
+            WHERE CPF = ? AND ATIVO = 1
         ''', (cpf,))
 
         user_exist = cursor.fetchone()
@@ -81,7 +81,7 @@ def start_diagnostico():
         # Retorna caso usuário não exista
         if not user_exist:
             return jsonify({
-                'error': 'Paciente não encontrado.'
+                'error': 'Paciente não encontrado ou inativo.'
             }), 404
 
         # Id do paciente
@@ -199,7 +199,7 @@ def update_diagnostico():
         cursor.execute('''
             SELECT ID_USUARIO
             FROM USUARIO
-            WHERE CPF = ?
+            WHERE CPF = ? AND ATIVO = 1
         ''', (cpf,))
 
         user_exist = cursor.fetchone()
@@ -207,7 +207,7 @@ def update_diagnostico():
         # Retorna caso usuário não exista
         if not user_exist:
             return jsonify({
-                'error': 'Paciente não encontrado.'
+                'error': 'Paciente não encontrado ou inativo.'
             }), 404
 
         # Id do paciente

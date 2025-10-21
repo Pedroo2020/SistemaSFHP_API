@@ -292,3 +292,134 @@ def update_triagem():
         }), 400
     finally:
         cursor.close()
+
+@app.route('/triagem', methods=['GET'])
+def get_triagem():
+    # Obtém o token
+    token = request.headers.get('Authorization')
+
+    # Retorna caso não tenha token
+    if not token:
+        return jsonify({'error': 'Token de autenticação necessário'}), 401
+
+    try:
+        # Abre o cursor
+        cursor = con.cursor()
+
+        # Remove o Bearer
+        token = remover_bearer(token)
+
+        # Valida o token
+        token_valido, payload = validar_token(token)
+
+        # Retorna caso token inválido
+        if not token_valido:
+            return jsonify({
+                'error': payload
+            }), 400
+
+        # Obtém o id do usuário
+        id_usuario = payload['id_usuario']
+
+        # Obtém o tipo de usuário
+        cursor.execute('''
+            SELECT TIPO_USUARIO
+            FROM USUARIO
+            WHERE ID_USUARIO = ? AND ATIVO = 1
+        ''', (id_usuario,))
+
+        result = cursor.fetchone()
+
+        # Usuário não encontrado
+        if not result:
+            return jsonify({
+                'error': 'Usuário não encontrado ou inativo.',
+                'logout': True
+            }), 404
+
+        # Obtém o tipo do usuário
+        tipo_usuario = int(result[0])
+
+        # Se o usuário não for ADM
+        if tipo_usuario not in [1, 2, 3, 4]:
+            return jsonify({
+                'error': 'Usuário não autorizado.',
+                'logout': True
+            }), 401
+
+        # Obtém o CPF passado por query string
+        cpf = request.args.get('cpf')
+
+        if not cpf:
+            return jsonify({'error': 'CPF do paciente não informado.'}), 400
+
+        # Busca o ID do paciente
+        cursor.execute('''
+            SELECT ID_USUARIO
+            FROM USUARIO
+            WHERE CPF = ? AND ATIVO = 1
+        ''', (cpf,))
+
+        user_result = cursor.fetchone()
+
+        if not user_result:
+            return jsonify({'error': 'Paciente não encontrado ou inativo.'}), 404
+
+        id_paciente = user_result[0]
+
+        # Busca a consulta mais recente (ou em andamento) do paciente
+        cursor.execute('''
+            SELECT ID_CONSULTA
+            FROM CONSULTA
+            WHERE ID_USUARIO = ?
+            ORDER BY ID_CONSULTA DESC
+        ''', (id_paciente,))
+
+        consulta_result = cursor.fetchone()
+
+        if not consulta_result:
+            return jsonify({'error': 'Nenhuma consulta encontrada para este paciente.'}), 404
+
+        id_consulta = consulta_result[0]
+
+        # Busca os dados da triagem
+        cursor.execute('''
+            SELECT 
+                QUEIXA,
+                TEMPERATURA,
+                PRESSAO,
+                FREQUENCIA_CARDIACA,
+                SATURACAO,
+                NIVEL_DOR,
+                ALERGIA,
+                MEDICAMENTO_USO,
+                CLASSIFICACAO_RISCO
+            FROM TRIAGEM
+            WHERE ID_CONSULTA = ?
+        ''', (id_consulta,))
+
+        triagem = cursor.fetchone()
+
+        if not triagem:
+            return jsonify({'error': 'Nenhum dado de triagem encontrado.'}), 404
+
+        # Monta o dicionário de retorno
+        triagem_dict = {
+            'queixa': triagem[0],
+            'temperatura': triagem[1],
+            'pressao': triagem[2],
+            'frequencia_cardiaca': triagem[3],
+            'saturacao': triagem[4],
+            'nivel_dor': triagem[5],
+            'alergia': triagem[6],
+            'medicamento_uso': triagem[7],
+            'classificacao_risco': triagem[8]
+        }
+
+        return jsonify({'triagem': triagem_dict}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+    finally:
+        cursor.close()

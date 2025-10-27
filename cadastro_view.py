@@ -2,7 +2,7 @@ from flask import jsonify, request
 from main import app, con
 from flask_bcrypt import generate_password_hash
 from components.mask import validar_senha, validar_cpf, validar_sus, validar_coren_crm, validar_telefone, validar_nascimento
-from components.utils import remover_bearer, validar_token
+from components.utils import remover_bearer, validar_token, is_empty
 
 @app.route('/cadastro', methods=['POST'])
 def cadastro_post():
@@ -63,7 +63,15 @@ def cadastro_post():
         senha = data.get('senha')
 
         # Retorna caso dados incompletos
-        if not nome or not email or not cpf or not telefone or not sexo or not nascimento or not tipo_usuario:
+        if (
+            is_empty(nome) or
+            is_empty(email) or
+            is_empty(cpf) or
+            is_empty(telefone) or
+            is_empty(sexo) or
+            is_empty(nascimento) or
+            is_empty(tipo_usuario)
+        ):
             return jsonify({
                 'error': 'Dados incompletos.'
             }), 400
@@ -485,7 +493,15 @@ def editar_user():
             }), 400
 
         # Retorna caso dados incompletos
-        if not nome or not email or not cpfNovo or not telefone or not sexo or not nascimento or not tipo_usuario:
+        if (
+            is_empty(nome) or
+            is_empty(email) or
+            is_empty(cpfNovo) or
+            is_empty(telefone) or
+            is_empty(sexo) or
+            is_empty(nascimento) or
+            is_empty(tipo_usuario)
+        ):
             return jsonify({
                 'error': 'Dados incompletos.'
             }), 400

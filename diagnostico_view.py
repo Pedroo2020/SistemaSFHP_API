@@ -1,7 +1,7 @@
 from datetime import datetime
 from flask import request, jsonify
 from main import app, con
-from components.utils import validar_token, remover_bearer
+from components.utils import validar_token, remover_bearer, is_empty
 
 @app.route('/start_diagnostico', methods=['POST'])
 def start_diagnostico():
@@ -190,7 +190,10 @@ def update_diagnostico():
         cpf = data.get('cpf')
 
         # Retorna caso algum dado não tenha sido informado
-        if (not diagnostico or not receita or not cpf):
+        if (is_empty(diagnostico) or
+            is_empty(receita) or
+            is_empty(cpf)
+        ):
 
             return jsonify({
                 'error': 'Dados incompletos.'

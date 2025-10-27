@@ -1,5 +1,5 @@
 import jwt
-from main import senha_secreta
+from main import senha_secreta, con
 
 # Remover bearer
 def remover_bearer(token):
@@ -17,3 +17,21 @@ def validar_token(token):
         return False, 'Token expirado.'
     except jwt.InvalidTokenError:
         return False, 'Token inválido.'
+
+# Função para ver se o valor é nulo
+def is_empty(value):
+    return value is None or (isinstance(value, str) and not value.strip())
+
+def getTempoMedio():
+    try:
+        cursor = con.cursor()
+
+        cursor.execute('''
+            SELECT
+        ''')
+
+        return 'oi'
+    except Exception as e:
+        return str(e)
+    finally:
+        cursor.close()

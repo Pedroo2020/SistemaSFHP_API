@@ -1,7 +1,7 @@
 from datetime import datetime
 from flask import request, jsonify
 from main import app, con
-from components.utils import validar_token, remover_bearer
+from components.utils import validar_token, remover_bearer, is_empty
 
 @app.route('/start_triagem', methods=['POST'])
 def start_triagem():
@@ -196,11 +196,18 @@ def update_triagem():
 
         cpf = data.get('cpf')
 
-        # Retorna caso algum dado não tenha sido informado
-        if (not queixa or not temperatura or not pressao or not frequencia_cardiaca
-            or not saturacao or not nivel_dor or not alergia or not medicamento_uso
-            or not classificacao_risco or not cpf):
-
+        if (
+            is_empty(queixa) or
+            is_empty(temperatura) or
+            is_empty(pressao) or
+            is_empty(frequencia_cardiaca) or
+            is_empty(saturacao) or
+            is_empty(nivel_dor) or
+            is_empty(alergia) or
+            is_empty(medicamento_uso) or
+            is_empty(classificacao_risco) or
+            is_empty(cpf)
+        ):
             return jsonify({
                 'error': 'Dados incompletos.'
             }), 400

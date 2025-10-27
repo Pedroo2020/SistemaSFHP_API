@@ -222,3 +222,72 @@ def get_consultas(situacao):
         }), 400
     finally:
         cursor.close()
+
+# Rota para obter as consultas de um usuário
+@app.route('/get_consultas', methods=['GET'])
+def get_consultas():
+    # Obtém o token
+    token = request.headers.get('Authorization')
+
+    # Retorna caso não tenha token
+    if not token:
+        return jsonify({'error': 'Token de autenticação necessário'}), 401
+
+    try:
+        # Abre o cursor
+        cursor = con.cursor()
+
+        # Remove o bearer
+        token = remover_bearer(token)
+
+        # Valida o token
+        token_valido, payload = validar_token(token)
+
+        # Retorna caso token inválido
+        if not token_valido:
+            return jsonify({
+                'error': payload
+            }), 400
+
+        # Obtém o id do usuário
+        id_usuario = payload['id_usuario']
+
+        # Obtém o tipo de usuário
+        cursor.execute('''
+                SELECT TIPO_USUARIO
+                FROM USUARIO
+                WHERE ID_USUARIO = ? AND ATIVO = 1
+            ''', (id_usuario,))
+
+        result = cursor.fetchone()
+
+        # Usuário não encontrado
+        if not result:
+            return jsonify({
+                'error': 'Usuário não encontrado ou inativo.',
+                'logout': True
+            }), 404
+
+        # Obtém o tipo do usuário
+        tipo_usuario = int(result[0])
+
+        if tipo_usuario not in [1,2,3,4]:
+            return jsonify({
+                'error': 'Requisição não permitida.'
+            }), 401
+
+        cpf = request.args.get()
+
+        cursor.execute('''
+            SELECT u.NOME
+            FROM CONSULTA c
+            LEFT JOIN USUARIO u ON u.ID_USUARIO = c.ID_USUARIO
+            WHERE c.ID_USUARIO = ?
+        ''', (cpf,))
+
+    except Exception as e:
+        return jsonify({
+            'error': str(e)
+        }), 400
+    finally:
+        cursor.close()

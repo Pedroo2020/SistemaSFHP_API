@@ -82,7 +82,7 @@ def load_painel():
             cursor.execute('''
                 SELECT 
                     COUNT(*) AS total,
-                    SUM(CASE WHEN t.CLASSIFICACAO_RISCO IN (4,5) THEN 1 ELSE 0 END) AS casos_urgentes
+                    COALESCE(SUM(CASE WHEN t.CLASSIFICACAO_RISCO IN (4,5) THEN 1 ELSE 0 END), 0) AS casos_urgentes
                 FROM CONSULTA c
                 LEFT JOIN TRIAGEM t ON t.ID_CONSULTA = c.ID_CONSULTA
                 WHERE SITUACAO != 5

@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from main import app, con, socketio
-from components.utils import validar_token, remover_bearer
+from components.utils import validar_token, remover_bearer, is_empty
 from flask_socketio import emit
 
 @app.route('/consulta', methods=['POST'])
@@ -225,7 +225,7 @@ def get_consultas(situacao):
 
 # Rota para obter as consultas de um usuário
 @app.route('/get_consultas', methods=['GET'])
-def get_consultas():
+def get_consultas_user():
     # Obtém o token
     token = request.headers.get('Authorization')
 
@@ -276,14 +276,74 @@ def get_consultas():
                 'error': 'Requisição não permitida.'
             }), 401
 
-        cpf = request.args.get()
+        cpf = request.args.get('cpf')
+
+        if is_empty(cpf):
+            return jsonify({
+                'error': 'Informe o CPF do paciente.'
+            }), 400
 
         cursor.execute('''
-            SELECT u.NOME
-            FROM CONSULTA c
-            LEFT JOIN USUARIO u ON u.ID_USUARIO = c.ID_USUARIO
-            WHERE c.ID_USUARIO = ?
+            SELECT ID_USUARIO
+            FROM USUARIO
+            WHERE CPF = ? AND ATIVO = 1
         ''', (cpf,))
+
+        result = cursor.fetchone()
+
+        if not result:
+            return jsonify({
+                'error': 'Paciente não encontrado ou inativo.'
+            }), 404
+
+        id_paciente = result[0]
+        print(id_paciente)
+
+        cursor.execute('''
+            SELECT 
+                paciente.NOME, 
+                c.DATA_ENTRADA, 
+                CASE c.SITUACAO
+                    WHEN 1 THEN 'Entrada'
+                    WHEN 2 THEN 'Na triagem'
+                    WHEN 3 THEN 'Esperando consulta'
+                    WHEN 4 THEN 'Na consulta'
+                    WHEN 5 THEN 'Alta'
+                    ELSE ''
+                END AS SITUACAO,
+                COALESCE(recepcionista.NOME, '~') AS RECEPCIONISTA,
+                COALESCE(enfermeiro.NOME, '~') AS ENFERMEIRO,
+                COALESCE(medico.NOME, '~') AS MEDICO,
+                c.ID_CONSULTA
+            FROM CONSULTA c
+            LEFT JOIN TRIAGEM t ON t.ID_CONSULTA = c.ID_CONSULTA 
+            LEFT JOIN DIAGNOSTICO d ON d.ID_CONSULTA = c.ID_CONSULTA
+            LEFT JOIN USUARIO paciente ON paciente.ID_USUARIO = c.ID_USUARIO
+            LEFT JOIN USUARIO recepcionista ON recepcionista.ID_USUARIO = c.ID_RECEPCIONISTA
+            LEFT JOIN USUARIO enfermeiro ON enfermeiro.ID_USUARIO = t.ID_ENFERMEIRO 
+            LEFT JOIN USUARIO medico ON medico.ID_USUARIO = d.ID_MEDICO 
+            WHERE c.ID_USUARIO = ?
+        ''', (id_paciente,))
+
+        data_consultas = cursor.fetchall()
+
+        print(data_consultas)
+        consultas = []
+
+        for consulta in data_consultas:
+            consultas.append({
+                'paciente': consulta[0],
+                'data_entrada': consulta[1],
+                'situacao': consulta[2].strip(),
+                'recepcionista': consulta[3],
+                'enfermeiro': consulta[4],
+                'medico': consulta[5],
+                'id_consulta': consulta[6]
+            })
+
+        return jsonify({
+            "consultas": consultas
+        }), 200
 
     except Exception as e:
         return jsonify({

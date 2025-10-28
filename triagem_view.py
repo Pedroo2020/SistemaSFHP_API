@@ -356,38 +356,40 @@ def get_triagem():
 
         # Obtém o CPF passado por query string
         cpf = request.args.get('cpf')
+        id_consulta = request.args.get('id_consulta')
 
-        if not cpf:
-            return jsonify({'error': 'CPF do paciente não informado.'}), 400
+        if is_empty(cpf) and is_empty(id_consulta):
+            return jsonify({'error': 'CPF ou ID da consulta não informados.'}), 400
 
-        # Busca o ID do paciente
-        cursor.execute('''
-            SELECT ID_USUARIO
-            FROM USUARIO
-            WHERE CPF = ? AND ATIVO = 1
-        ''', (cpf,))
+        if cpf:
+            # Busca o ID do paciente
+            cursor.execute('''
+                SELECT ID_USUARIO
+                FROM USUARIO
+                WHERE CPF = ? AND ATIVO = 1
+            ''', (cpf,))
 
-        user_result = cursor.fetchone()
+            user_result = cursor.fetchone()
 
-        if not user_result:
-            return jsonify({'error': 'Paciente não encontrado ou inativo.'}), 404
+            if not user_result:
+                return jsonify({'error': 'Paciente não encontrado ou inativo.'}), 404
 
-        id_paciente = user_result[0]
+            id_paciente = user_result[0]
 
-        # Busca a consulta mais recente (ou em andamento) do paciente
-        cursor.execute('''
-            SELECT ID_CONSULTA
-            FROM CONSULTA
-            WHERE ID_USUARIO = ?
-            ORDER BY ID_CONSULTA DESC
-        ''', (id_paciente,))
+            # Busca a consulta mais recente (ou em andamento) do paciente
+            cursor.execute('''
+                SELECT ID_CONSULTA
+                FROM CONSULTA
+                WHERE ID_USUARIO = ?
+                ORDER BY ID_CONSULTA DESC
+            ''', (id_paciente,))
 
-        consulta_result = cursor.fetchone()
+            consulta_result = cursor.fetchone()
 
-        if not consulta_result:
-            return jsonify({'error': 'Nenhuma consulta encontrada para este paciente.'}), 404
+            if not consulta_result:
+                return jsonify({'error': 'Nenhuma consulta encontrada para este paciente.'}), 404
 
-        id_consulta = consulta_result[0]
+            id_consulta = consulta_result[0]
 
         # Busca os dados da triagem
         cursor.execute('''

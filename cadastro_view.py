@@ -214,8 +214,11 @@ def get_cadastro():
     # Obtém o CPF do usuário
     cpf_param = request.args.get('cpf')
 
+    # Obtém o id da consulta
+    id_consulta = request.args.get('id_consulta')
+
     # Retorna caso não tenha token
-    if not token and not cpf_param:
+    if not token:
         return jsonify({'error': 'Token de autenticação necessário'}), 401
 
     try:
@@ -277,8 +280,30 @@ def get_cadastro():
                 WHERE cpf = ?
             ''', (cpf_param,))
 
-        else:
+        elif id_consulta:
+            cursor.execute('''
+                SELECT ID_USUARIO
+                FROM CONSULTA
+                WHERE ID_CONSULTA = ?
+            ''', (id_consulta,))
 
+            result = cursor.fetchone()
+
+            if not result:
+                return jsonify({
+                    'error': 'Consulta não encontrada.'
+                }), 404
+
+            id_paciente = result[0]
+
+            # Obtém pelo id do usuário
+            cursor.execute('''
+                        SELECT NOME, EMAIL, CPF, TELEFONE, DATA_NASCIMENTO, SEXO, TIPO_USUARIO, COREN_CRM_SUS, ATIVO
+                        FROM USUARIO
+                        WHERE ID_USUARIO = ?
+                    ''', (id_paciente,))
+
+        else:
             # Obtém pelo id do usuário
             cursor.execute('''
                 SELECT NOME, EMAIL, CPF, TELEFONE, DATA_NASCIMENTO, SEXO, TIPO_USUARIO, COREN_CRM_SUS, ATIVO

@@ -177,8 +177,13 @@ def get_consultas(situacao):
                 'logout': True
             }), 401
 
+        like = request.args.get('s')
+
+        if like:
+            like = like.upper()
+
         # Busca os dados
-        cursor.execute("""    
+        cursor.execute(f"""    
                           SELECT DATA_ENTRADA
                                , SITUACAO 
                                , NOME 
@@ -187,8 +192,8 @@ def get_consultas(situacao):
                                , CLASSIFICACAO_RISCO 
                                , TEMPO_DECORRIDO
                                , CPF
-                            FROM PR_LISTA_CONSULTA(?)
-                       """, (situacao,))
+                            FROM PR_LISTA_CONSULTA(?, ?)
+                       """, (situacao, like))
 
         res = cursor.fetchall()
 
@@ -297,7 +302,6 @@ def get_consultas_user():
             }), 404
 
         id_paciente = result[0]
-        print(id_paciente)
 
         cursor.execute('''
             SELECT 
@@ -327,7 +331,6 @@ def get_consultas_user():
 
         data_consultas = cursor.fetchall()
 
-        print(data_consultas)
         consultas = []
 
         for consulta in data_consultas:

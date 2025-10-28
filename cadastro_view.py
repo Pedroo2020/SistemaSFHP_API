@@ -404,12 +404,34 @@ def get_all_users():
                 'error': 'Requisição não autorizada.'
             }), 401
 
+        tipo_usuario_filtro = request.args.get('t')
+        nome_like = request.args.get('s')
 
-        # Obtém todos os usuários
-        cursor.execute('''
+        sql = '''
             SELECT NOME, EMAIL, CPF, TELEFONE, DATA_NASCIMENTO, SEXO, TIPO_USUARIO, COREN_CRM_SUS
             FROM USUARIO
-        ''', (id_usuario,))
+        '''
+
+        params = []
+        where = []
+
+        if tipo_usuario_filtro:
+            where.append('TIPO_USUARIO = ?')
+            params.append(tipo_usuario_filtro)
+
+        if nome_like:
+            where.append('(NOME LIKE ? OR EMAIL LIKE ? OR CPF LIKE ?)')
+            like_param = f'%{nome_like.upper()}%'
+            params.append(like_param)
+            params.append(like_param)
+            params.append(like_param)
+
+        if len(where) > 0:
+            where = 'WHERE ' + ' AND '.join(where)
+            sql += where
+
+        # Obtém todos os usuários
+        cursor.execute(sql, params)
 
         data = cursor.fetchall()
 

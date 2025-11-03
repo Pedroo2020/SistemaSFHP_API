@@ -186,6 +186,7 @@ def update_diagnostico():
         # Obtém o dados
         diagnostico = data.get('diagnostico')
         receita = data.get('receita')
+        enfermagem = data.get('enfermagem')
 
         cpf = data.get('cpf')
 
@@ -259,9 +260,9 @@ def update_diagnostico():
         # Cria o diagnóstico
         cursor.execute('''
             INSERT INTO DIAGNOSTICO
-            (ID_CONSULTA, DIAGNOSTICO, RECEITA, ID_MEDICO)
-            VALUES (?, ?, ?, ?)
-        ''', (id_consulta, diagnostico, receita, id_usuario))
+            (ID_CONSULTA, DIAGNOSTICO, RECEITA, RECEITA_ENFERMAGEM, ID_MEDICO)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (id_consulta, diagnostico, receita, enfermagem, id_usuario))
 
         # Atualiza a situação
         cursor.execute('''
@@ -274,7 +275,8 @@ def update_diagnostico():
         con.commit()
 
         return jsonify({
-            'success': 'Diagnóstico cadastrado com sucesso!'
+            'success': 'Diagnóstico cadastrado com sucesso!',
+            'id_consulta': id_consulta
         }), 200
 
     except Exception as e:
@@ -380,7 +382,8 @@ def get_diagnostico():
         cursor.execute('''
             SELECT 
                 DIAGNOSTICO,
-                RECEITA
+                RECEITA,
+                RECEITA_ENFERMAGEM
             FROM DIAGNOSTICO
             WHERE ID_CONSULTA = ?
         ''', (id_consulta,))
@@ -393,7 +396,8 @@ def get_diagnostico():
         # Monta o dicionário de retorno
         diagnostico_dict = {
             'diagnostico': diagnostico[0],
-            'receita': diagnostico[1]
+            'receita': diagnostico[1],
+            'enfermagem': diagnostico[2]
         }
 
         return jsonify({'diagnostico': diagnostico_dict}), 200

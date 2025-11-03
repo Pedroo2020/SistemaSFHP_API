@@ -135,7 +135,6 @@ def get_consultas(situacao):
     try:
         # Abre o cursor
         cursor = con.cursor()
-
         # Remove o bearer
         token = remover_bearer(token)
 
@@ -184,7 +183,8 @@ def get_consultas(situacao):
 
         # Busca os dados
         cursor.execute(f"""    
-                          SELECT DATA_ENTRADA
+                          SELECT ID_CONSULTA
+                               , DATA_ENTRADA
                                , SITUACAO 
                                , NOME 
                                , SEXO 
@@ -207,14 +207,15 @@ def get_consultas(situacao):
 
                 consultas.append({
                     "posicao": posicao,
-                    "data_entrada": consulta[0].strftime("%d/%m/%Y %H:%M") if consulta[0] else None,
-                    "situacao": consulta[1].strip('  '),
-                    "nome": consulta[2],
-                    "sexo": consulta[3],
-                    "idade": consulta[4],
-                    "classificacao_risco": consulta[5].strip() if consulta[5] else None,
-                    "tempo_decorrido": consulta[6],
-                    "cpf": consulta[7]
+                    "id_consulta": consulta[0],
+                    "data_entrada": consulta[1].strftime("%d/%m/%Y %H:%M") if consulta[0] else None,
+                    "situacao": consulta[2].strip('  '),
+                    "nome": consulta[3],
+                    "sexo": consulta[4],
+                    "idade": consulta[5],
+                    "classificacao_risco": consulta[6].strip() if consulta[5] else None,
+                    "tempo_decorrido": consulta[7],
+                    "cpf": consulta[8]
                 })
 
         return jsonify({

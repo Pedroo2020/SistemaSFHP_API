@@ -167,14 +167,14 @@ def login():
 @app.route('/gerar_codigo', methods=['POST'])
 def gerar_codigo():
     try:
+        cursor = con.cursor()
+
         cpf = request.args.get('cpf')
 
         if not cpf:
             return jsonify({
                 'error': 'CPF não informado.'
             }), 400
-
-        cursor = con.cursor()
 
         cursor.execute('''
             SELECT EMAIL

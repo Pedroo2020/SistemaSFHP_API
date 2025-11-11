@@ -258,12 +258,22 @@ def get_consultas_user():
         # Obtém o id do usuário
         id_usuario = payload['id_usuario']
 
-        # Obtém o tipo de usuário
-        cursor.execute('''
-                SELECT TIPO_USUARIO
-                FROM USUARIO
-                WHERE ID_USUARIO = ? AND ATIVO = 1
-            ''', (id_usuario,))
+        pacienteRequest = request.args.get('p')
+
+        if pacienteRequest:
+            # Obtém o tipo de usuário
+            cursor.execute('''
+                    SELECT CPF
+                    FROM USUARIO
+                    WHERE ID_USUARIO = ? AND ATIVO = 1
+                ''', (id_usuario,))
+        else:
+            # Obtém o tipo de usuário
+            cursor.execute('''
+                    SELECT TIPO_USUARIO
+                    FROM USUARIO
+                    WHERE ID_USUARIO = ? AND ATIVO = 1
+                ''', (id_usuario,))
 
         result = cursor.fetchone()
 
@@ -274,15 +284,18 @@ def get_consultas_user():
                 'logout': True
             }), 404
 
-        # Obtém o tipo do usuário
-        tipo_usuario = int(result[0])
+        if pacienteRequest:
+            cpf = result[0]
+        else:
+            # Obtém o tipo do usuário
+            tipo_usuario = int(result[0])
 
-        if tipo_usuario not in [1,2,3,4]:
-            return jsonify({
-                'error': 'Requisição não permitida.'
-            }), 401
+            if tipo_usuario not in [1,2,3,4]:
+                return jsonify({
+                    'error': 'Requisição não permitida.'
+                }), 401
 
-        cpf = request.args.get('cpf')
+            cpf = request.args.get('cpf')
 
         if is_empty(cpf):
             return jsonify({
@@ -309,17 +322,19 @@ def get_consultas_user():
                 paciente.NOME, 
                 c.DATA_ENTRADA, 
                 CASE c.SITUACAO
-                    WHEN 1 THEN 'Entrada'
+                    WHEN 1 THEN 'Aguardando triagem'
                     WHEN 2 THEN 'Na triagem'
-                    WHEN 3 THEN 'Esperando consulta'
+                    WHEN 3 THEN 'Aguardando consulta'
                     WHEN 4 THEN 'Na consulta'
-                    WHEN 5 THEN 'Alta'
+                    WHEN 5 THEN 'Alta recebida'
                     ELSE ''
                 END AS SITUACAO,
                 COALESCE(recepcionista.NOME, '~') AS RECEPCIONISTA,
                 COALESCE(enfermeiro.NOME, '~') AS ENFERMEIRO,
                 COALESCE(medico.NOME, '~') AS MEDICO,
-                c.ID_CONSULTA
+                c.ID_CONSULTA,
+                d.DIAGNOSTICO,
+                c.SITUACAO
             FROM CONSULTA c
             LEFT JOIN TRIAGEM t ON t.ID_CONSULTA = c.ID_CONSULTA 
             LEFT JOIN DIAGNOSTICO d ON d.ID_CONSULTA = c.ID_CONSULTA
@@ -342,7 +357,9 @@ def get_consultas_user():
                 'recepcionista': consulta[3],
                 'enfermeiro': consulta[4],
                 'medico': consulta[5],
-                'id_consulta': consulta[6]
+                'id_consulta': consulta[6],
+                'diagnostico': consulta[7],
+                'situacao_vetor': consulta[8]
             })
 
         return jsonify({

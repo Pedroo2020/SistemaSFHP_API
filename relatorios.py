@@ -94,7 +94,6 @@ class PDFReceitaPaciente(FPDF):
 
 class PDFReceitaEnfermagem(FPDF):
     def __init__(self, paciente_nome, medico_nome, medico_crm, receita_enfermagem, data):
-        # Usando tamanho A5: 148 × 210 mm
         super().__init__(format=(148, 210))
         self.paciente_nome = paciente_nome
         self.medico_nome = medico_nome
@@ -156,9 +155,9 @@ def criar_pdf_receita_paciente(id_consulta):
             SELECT pac.NOME AS NOME_PACIENTE, med.NOME AS NOME_MEDICO, med.COREN_CRM_SUS, d.RECEITA 
             FROM CONSULTA c
             INNER JOIN USUARIO pac ON pac.ID_USUARIO = c.ID_USUARIO
-            INNER JOIN DIAGNOSTICO d ON c.ID_CONSULTA = c.ID_CONSULTA
+            INNER JOIN DIAGNOSTICO d ON d.ID_CONSULTA = c.ID_CONSULTA
             INNER JOIN USUARIO med ON med.ID_USUARIO = d.ID_MEDICO
-            WHERE c.ID_CONSULTA = ? 
+            WHERE c.ID_CONSULTA = ?
         """
             , (id_consulta, ))
 

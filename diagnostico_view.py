@@ -335,7 +335,7 @@ def get_diagnostico():
         tipo_usuario = int(result[0])
 
         # Se o usuário não for ADM
-        if tipo_usuario not in [1, 2, 3, 4]:
+        if tipo_usuario not in [1, 2, 3, 4, 5]:
             return jsonify({
                 'error': 'Usuário não autorizado.',
                 'logout': True

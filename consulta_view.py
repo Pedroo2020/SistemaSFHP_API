@@ -290,7 +290,7 @@ def get_consultas_user():
             # Obtém o tipo do usuário
             tipo_usuario = int(result[0])
 
-            if tipo_usuario not in [1,2,3,4]:
+            if tipo_usuario not in [1,2,3,4,5]:
                 return jsonify({
                     'error': 'Requisição não permitida.'
                 }), 401

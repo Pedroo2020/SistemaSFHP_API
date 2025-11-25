@@ -351,7 +351,7 @@ def alterar_senha():
 
         cursor.execute('''
             UPDATE USUARIO
-            SET SENHA = ?, REC_SENHA = NULL, DATAHORA_REC_SENHA = NULL
+            SET SENHA = ?, REC_SENHA = NULL, DATAHORA_REC_SENHA = NULL, ATIVO = 1
             WHERE EMAIL = ?
         ''', (senha_hash, email))
 

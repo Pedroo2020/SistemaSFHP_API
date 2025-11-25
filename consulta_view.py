@@ -2,6 +2,7 @@ from flask import request, jsonify
 from main import app, con, socketio
 from components.utils import validar_token, remover_bearer, is_empty
 from flask_socketio import emit
+from datetime import datetime
 
 @app.route('/consulta', methods=['POST'])
 def add_consulta():
@@ -315,6 +316,24 @@ def get_consultas_user():
                 'error': 'Paciente não encontrado ou inativo.'
             }), 404
 
+        # Obtém as médias de todo o período
+        cursor.execute('''
+                    select ESPERA_TRIAGEM, TRIAGEM, ESPERA_CONSULTA, DIAGNOSTICO 
+                    from PR_TEMPO_MEDIO_ESPERA('0001-01-01', '9999-12-31');
+                ''')
+
+        datas = cursor.fetchone()
+
+        if not datas:
+            return jsonify({
+                'error': 'Erro ao obter tempo de espera.'
+            }), 400
+
+        espera_triagem = datas[0]
+        triagem = datas[1]
+        espera_consulta = datas[2]
+        diagnostico = datas[3]
+
         id_paciente = result[0]
 
         cursor.execute('''
@@ -334,7 +353,8 @@ def get_consultas_user():
                 COALESCE(medico.NOME, '~') AS MEDICO,
                 c.ID_CONSULTA,
                 d.DIAGNOSTICO,
-                c.SITUACAO
+                c.SITUACAO,
+                d.DATA_DIAGNOSTICO
             FROM CONSULTA c
             LEFT JOIN TRIAGEM t ON t.ID_CONSULTA = c.ID_CONSULTA 
             LEFT JOIN DIAGNOSTICO d ON d.ID_CONSULTA = c.ID_CONSULTA
@@ -351,6 +371,15 @@ def get_consultas_user():
         consultas = []
 
         for consulta in data_consultas:
+            # Obtém o tempo de espera correto para determinada etapa
+            tempo_espera = (
+                espera_triagem if consulta[8] == 1 else
+                triagem if consulta[8] == 2 else
+                espera_consulta if consulta[8] == 3 else
+                diagnostico if consulta[8] == 4 else
+                int((consulta[9] - consulta[1]).total_seconds() // 60)
+            )
+
             consultas.append({
                 'paciente': consulta[0],
                 'data_entrada': consulta[1],
@@ -360,7 +389,8 @@ def get_consultas_user():
                 'medico': consulta[5],
                 'id_consulta': consulta[6],
                 'diagnostico': consulta[7],
-                'situacao_vetor': consulta[8]
+                'situacao_vetor': consulta[8],
+                'tempo_espera': tempo_espera
             })
 
         return jsonify({

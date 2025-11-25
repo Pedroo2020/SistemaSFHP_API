@@ -90,9 +90,29 @@ def validar_coren_crm(numero: str) -> bool:
     if not isinstance(numero, str):
         return False
 
-    # Ex: 123456-SP ou 123456
-    padrao = r'^\d{6,8}(-[A-Z]{2})?$'
-    return re.match(padrao, numero) is not None
+    s = numero.strip().upper()
+    # Remove espaços, pontos, barras e hífens para facilitar validação
+    s_clean = re.sub(r'[\s\.\-\/]', '', s)
+
+    # 1) CRM com prefixo: "CRM" + UF(2) + 6 dígitos  -> ex: "CRMSP123456"
+    if s_clean.startswith('CRM'):
+        rest = s_clean[3:]
+        return bool(re.fullmatch(r'[A-Z]{2}\d{6}', rest))
+
+    # 2) COREN moderno: UF(2) + 6 dígitos + categoria(3 letras) -> ex: "SP123456ENF"
+    if re.fullmatch(r'[A-Z]{2}\d{6}[A-Z]{3}', s_clean):
+        return True
+
+    # 3) Legado: 6 dígitos + UF(2) -> ex: "123456SP"
+    if re.fullmatch(r'\d{6}[A-Z]{2}', s_clean):
+        return True
+
+    # 4) UF + 6 dígitos (ex: "SP123456") — tratar como CRM válido
+    if re.fullmatch(r'[A-Z]{2}\d{6}', s_clean):
+        return True
+
+    # Se nenhum padrão bateu, inválido
+    return False
 
 def validar_telefone(telefone: str) -> bool:
     if not isinstance(telefone, str):

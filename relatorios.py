@@ -89,7 +89,7 @@ class PDFReceitaPaciente(FPDF):
         self.set_font('Helvetica', '', 9)
         self.cell(0, 5, '____________________________', 0, 1, 'C')
         self.cell(0, 4, f"Dr. {format_none(self.medico_nome)}", 0, 1, 'C')
-        self.cell(0, 4, f"CRM {format_none(self.medico_crm)}", 0, 1, 'C')
+        self.cell(0, 4, f"{format_none(self.medico_crm)}", 0, 1, 'C')
 
 
 class PDFReceitaEnfermagem(FPDF):
@@ -143,7 +143,7 @@ class PDFReceitaEnfermagem(FPDF):
         self.set_y(meio_altura)
         self.set_font('Helvetica', '', 9)
         self.cell(0, 4, f"Dr. {format_none(self.medico_nome)}", 0, 1, 'C')
-        self.cell(0, 4, f"CRM {format_none(self.medico_crm)}", 0, 1, 'C')
+        self.cell(0, 4, f"{format_none(self.medico_crm)}", 0, 1, 'C')
 
 @app.route('/relatorio/receita/paciente/<int:id_consulta>', methods=['GET'])
 def criar_pdf_receita_paciente(id_consulta):

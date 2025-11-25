@@ -129,7 +129,7 @@ def cadastro_post():
                 }), 400
 
             # Caso o usuário seja paciente, gera senha a partir do número do sus
-            senha_hash = generate_password_hash(coren_crm_sus)
+            senha_hash = generate_password_hash(cpf)
 
         else:
             # Caso seja médico ou enfermeiro, verifica CRM / COREN

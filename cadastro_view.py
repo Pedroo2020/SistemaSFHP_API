@@ -6,50 +6,36 @@ from components.utils import remover_bearer, validar_token, is_empty
 
 @app.route('/cadastro', methods=['POST'])
 def cadastro_post():
-    # Obtém o token
     token = request.headers.get('Authorization')
 
-    # Retorna caso não tenha token
     if not token:
         return jsonify({'error': 'Token de autenticação necessário'}), 401
 
     try:
         cursor = con.cursor()
 
-        # Remove o bearer
         token = remover_bearer(token)
-
-        # Valida o token
         token_valido, payload = validar_token(token)
 
-        # Retorna caso token inválido
         if not token_valido:
-            return jsonify({
-                'error': payload
-            }), 401
+            return jsonify({'error': payload}), 401
 
-        # Obtém o id_usuario
         id_usuario = payload['id_usuario']
 
-        # Obtém o tipo do usuário
-        cursor.execute('''
+        # Tipo do usuário logado
+        cursor.execute("""
             SELECT TIPO_USUARIO
             FROM USUARIO
             WHERE ID_USUARIO = ? AND ATIVO = 1
-        ''', (id_usuario,))
-
+        """, (id_usuario,))
         result = cursor.fetchone()
 
-        # Usuário não encontrado
         if not result:
-            return jsonify({
-                'error': 'Usuário não encontrado ou inativo.',
-                'logout': True
-            }), 404
+            return jsonify({'error': 'Usuário não encontrado ou inativo.', 'logout': True}), 404
 
         tipo_usuario_token = result[0]
 
-        # Obtém os dados
+        # Dados enviados no body
         data = request.get_json()
 
         nome = data.get('nome')
@@ -59,10 +45,10 @@ def cadastro_post():
         telefone = data.get('telefone')
         sexo = data.get('sexo')
         nascimento = data.get('nascimento')
-        tipo_usuario = data.get('tipo_usuario')
+        tipo_usuario = data.get('tipo_usuario')  # tipo que está sendo criado
         senha = data.get('senha')
 
-        # Retorna caso dados incompletos
+        # Dados obrigatórios
         if (
             is_empty(nome) or
             is_empty(email) or
@@ -72,135 +58,91 @@ def cadastro_post():
             is_empty(nascimento) or
             is_empty(tipo_usuario)
         ):
-            return jsonify({
-                'error': 'Dados incompletos.'
-            }), 400
+            return jsonify({'error': 'Dados incompletos.'}), 400
 
-        # Usuário não for ADM, retorna
+        # --- REGRAS DE AUTORIZAÇÃO ---
+        # Se não for ADM
         if tipo_usuario_token != 1:
 
-            if tipo_usuario_token != 4:
-                return jsonify({
-                    'error': 'Usuário não autorizado.'
-                }), 401
+            # Se for recepcionista, só pode cadastrar pacientes
+            if tipo_usuario_token == 4:
+                if tipo_usuario != 5:
+                    return jsonify({'error': 'Recepcionista só pode cadastrar pacientes.'}), 401
+                # Se chegou aqui, é recepcionista criando paciente → PERMITIDO
+            else:
+                # Outros tipos não podem criar usuários
+                return jsonify({'error': 'Usuário não autorizado.'}), 401
 
-            elif tipo_usuario != 5:
-                return jsonify({
-                    'error': 'Cadastro de tipo de usuário não autorizado.'
-                }), 401
+        # --- VALIDAÇÕES ---
+        if not validar_cpf(cpf):
+            return jsonify({'error': 'CPF inválido.'}), 400
 
-        # Valida o CPF, telefone e a data de nascimento
-        cpf_valido = validar_cpf(cpf)
-        telefone_valido = validar_telefone(telefone)
-        nascimento_valido = validar_nascimento(nascimento)
+        if not validar_telefone(telefone):
+            return jsonify({'error': 'Telefone inválido.'}), 400
 
-        # CPF inválido
-        if not cpf_valido:
-            return jsonify({
-                'error': 'CPF inválido.'
-            }), 400
+        if not validar_nascimento(nascimento):
+            return jsonify({'error': 'Data de nascimento inválida.'}), 400
 
-        # Telefone inválido
-        if not telefone_valido:
-            return jsonify({
-                'error': 'Telefone inválido.'
-            }), 400
-
-        # Data de nacimento inválida
-        if not nascimento_valido:
-            return jsonify({
-                'error': 'Data de nascimento inválida.'
-            }), 400
-
-        # SUS e coren inválidos
+        # Tipo 5 = paciente
         if tipo_usuario == 5:
-
-            # Verifica se o usuário informou o documento
             if coren_crm_sus:
+                if not validar_sus(coren_crm_sus):
+                    return jsonify({'error': 'Número do SUS inválido.'}), 400
 
-                sus_valido = validar_sus(coren_crm_sus)
-
-                if not sus_valido:
-                    return jsonify({
-                        'error': 'Número do SUS inválido.'
-                    }), 400
-
-            # Caso o usuário seja paciente, gera senha a partir do número do sus
+            # Senha do paciente = CPF
             senha_hash = generate_password_hash(cpf)
 
         else:
-            # Caso seja médico ou enfermeiro, verifica CRM / COREN
+            # Médico ou enfermeiro precisam CRM/COREN
             if tipo_usuario in [2, 3]:
 
-                # Verifica se o usuário informou o documento
                 if not coren_crm_sus:
-                    return jsonify({
-                        'error': f'Informe o {'CRM' if tipo_usuario == 2 else 'COREN'}.'
-                    }), 400
+                    return jsonify({'error': f"Informe o {'CRM' if tipo_usuario == 2 else 'COREN'}."}), 400
 
-                crm_coren_valido = validar_coren_crm(coren_crm_sus)
+                if not validar_coren_crm(coren_crm_sus):
+                    return jsonify({'error': f"{'CRM' if tipo_usuario == 2 else 'COREN'} inválido."}), 400
 
-                if not crm_coren_valido:
-                    return jsonify({
-                        'error': f'{'CRM' if tipo_usuario == 2 else 'COREN'} inválido.'
-                    }), 400
-
-            # Caso a senha não for informada
+            # Demais precisam senha
             if not senha:
-                return jsonify({
-                    'error': 'Informe a senha.'
-                }), 400
+                return jsonify({'error': 'Informe a senha.'}), 400
 
-            # Verifica se a senha é forte
             senha_valida = validar_senha(senha)
 
-            # Retorna o erro da senha
             if senha_valida is not True:
-                return jsonify({
-                    'error': senha_valida
-                }), 400
+                return jsonify({'error': senha_valida}), 400
 
-            # Gera a senha criptografada
             senha_hash = generate_password_hash(senha)
 
-        # Verifica se os dados já estão cadastrados
-        cursor.execute(f'''
-            SELECT 1 
+        query = """
+            SELECT 1
             FROM USUARIO
-            WHERE CPF = ? OR EMAIL = ? OR TELEFONE = ? {"OR COREN_CRM_SUS = ?" if coren_crm_sus else None}
-        ''', (cpf, email, telefone, coren_crm_sus))
+            WHERE CPF = ? OR EMAIL = ? OR TELEFONE = ?
+        """
+        params = [cpf, email, telefone]
 
-        # Caso os dados já existam, retorna
-        user_exists = cursor.fetchone()
+        if coren_crm_sus:
+            query += " OR COREN_CRM_SUS = ?"
+            params.append(coren_crm_sus)
 
-        if user_exists:
-            cursor.close()
-            return jsonify({
-                'error': 'Dados já cadastrados.'
-            }), 401
+        cursor.execute(query, params)
 
-        # Cadastro o usuário no banco
-        cursor.execute('''
+        if cursor.fetchone():
+            return jsonify({'error': 'Dados já cadastrados.'}), 401
+
+        cursor.execute("""
             INSERT INTO USUARIO
             (NOME, EMAIL, CPF, COREN_CRM_SUS, TELEFONE, SEXO, DATA_NASCIMENTO, TIPO_USUARIO, SENHA, TENTATIVA_ERRO, ATIVO)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1)
-        ''', (nome.upper(), email, cpf, coren_crm_sus, telefone, sexo, nascimento, tipo_usuario, senha_hash))
+        """, (nome.upper(), email, cpf, coren_crm_sus, telefone, sexo, nascimento, tipo_usuario, senha_hash))
 
-        # Salva as mudanças
         con.commit()
 
-        # Retorna sucesso
-        return jsonify({
-            'success': 'Usuário cadastrado com sucesso!'
-        }), 200
+        return jsonify({'success': 'Usuário cadastrado com sucesso!'}), 200
 
     except Exception as e:
-        # Retorna caso ocorra erro inesperado
-        return jsonify({
-            'error': str(e)
-        })
+        return jsonify({'error': str(e)}), 500
+
     finally:
-        # Fecha o cursor ao final
         cursor.close()
 
 @app.route('/cadastro', methods=['GET'])

@@ -55,7 +55,7 @@ def cadastro_post():
         nome = data.get('nome')
         email = data.get('email')
         cpf = data.get('cpf')
-        coren_crm_sus = data.get('coren_crm_sus')
+        coren_crm_sus = data.get('coren_crm_sus', None)
         telefone = data.get('telefone')
         sexo = data.get('sexo')
         nascimento = data.get('nascimento')
@@ -116,17 +116,14 @@ def cadastro_post():
         if tipo_usuario == 5:
 
             # Verifica se o usuário informou o documento
-            if not coren_crm_sus:
-                return jsonify({
-                    'error': 'Informe o número do SUS.'
-                }), 400
+            if coren_crm_sus:
 
-            sus_valido = validar_sus(coren_crm_sus)
+                sus_valido = validar_sus(coren_crm_sus)
 
-            if not sus_valido:
-                return jsonify({
-                    'error': 'Número do SUS inválido.'
-                }), 400
+                if not sus_valido:
+                    return jsonify({
+                        'error': 'Número do SUS inválido.'
+                    }), 400
 
             # Caso o usuário seja paciente, gera senha a partir do número do sus
             senha_hash = generate_password_hash(cpf)
@@ -167,10 +164,10 @@ def cadastro_post():
             senha_hash = generate_password_hash(senha)
 
         # Verifica se os dados já estão cadastrados
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT 1 
             FROM USUARIO
-            WHERE CPF = ? OR EMAIL = ? OR TELEFONE = ? OR COREN_CRM_SUS = ?
+            WHERE CPF = ? OR EMAIL = ? OR TELEFONE = ? {"OR COREN_CRM_SUS = ?" if coren_crm_sus else None}
         ''', (cpf, email, telefone, coren_crm_sus))
 
         # Caso os dados já existam, retorna

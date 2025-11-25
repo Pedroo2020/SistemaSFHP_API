@@ -343,6 +343,7 @@ def get_consultas_user():
             LEFT JOIN USUARIO enfermeiro ON enfermeiro.ID_USUARIO = t.ID_ENFERMEIRO 
             LEFT JOIN USUARIO medico ON medico.ID_USUARIO = d.ID_MEDICO 
             WHERE c.ID_USUARIO = ?
+            ORDER BY c.DATA_ENTRADA DESC
         ''', (id_paciente,))
 
         data_consultas = cursor.fetchall()

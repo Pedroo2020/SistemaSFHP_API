@@ -43,6 +43,7 @@ class PDFReceitaPaciente(FPDF):
         self.medico_crm = medico_crm
         self.receita = receita
         self.data = data
+        self.set_margins(10, 10, 10)
 
     def header(self):
         self.set_font('Helvetica', 'B', 11)
@@ -81,7 +82,8 @@ class PDFReceitaPaciente(FPDF):
         self.set_font('Helvetica', 'B', 10)
         self.cell(0, 6, 'Prescrição Médica:', ln=True)
         self.set_font('Helvetica', '', 9)
-        self.cell(0, 5, format_none(self.receita), ln=True)
+        largura_texto = self.w - 20
+        self.multi_cell(largura_texto, 5, format_none(self.receita))
 
         # Assinatura médica no meio da folha
         meio_altura = (self.h / 3) * 2
